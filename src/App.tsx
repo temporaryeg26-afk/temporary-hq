@@ -232,9 +232,19 @@ export default function App() {
   const refresh = useCallback(async () => {
     try {
       const email = session?.user?.email ?? "";
-      const { data: team } = await sb.from("team_members").select("email").limit(1);
+      // Retry a few times: right after login the request can briefly go out without the new login.
+      let team: { email: string }[] | null = null;
+      let lastErr: unknown = null;
+      for (let i = 0; i < 4 && !team?.length; i++) {
+        if (i > 0) await new Promise((r) => setTimeout(r, 700));
+        const res = await sb.from("team_members").select("email").limit(1);
+        team = res.data;
+        lastErr = res.error;
+      }
       if (!team?.length) {
-        await sb.auth.signOut();
+        console.warn("TEMP. HQ access check failed", lastErr);
+        // Log out only this tab, never every tab and device.
+        await sb.auth.signOut({ scope: "local" });
         setDenied("This email doesn't have access to TEMP. HQ.");
         return;
       }
