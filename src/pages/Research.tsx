@@ -1,9 +1,8 @@
 import { useBrand } from "../App";
 import Relay from "../components/Relay";
 import { aiName, ErrorNote, PageHead, Panel, Text, useAsync } from "../components/ui";
-import { applyLab, applyResearch } from "../lib/data";
+import { applyLab, applyResearch, loadResearch } from "../lib/data";
 import { labPack, researchPack } from "../lib/packs";
-import { must, sb } from "../lib/supabase";
 import type { Research } from "../lib/types";
 
 const STRENGTH: Record<string, string> = { rising: "text-moss", peak: "text-ochre", fading: "text-brick", steady: "text-concrete" };
@@ -11,10 +10,7 @@ const STRENGTH: Record<string, string> = { rising: "text-moss", peak: "text-ochr
 export default function ResearchPage() {
   const { brand, products } = useBrand();
   const manager = brand.settings?.manager ?? "claude";
-  const { data, error, reload } = useAsync(
-    async () => must<Research[]>(await sb.from("research").select("*").eq("brand_id", brand.id).order("created_at", { ascending: false }).limit(60)),
-    [brand.id]
-  );
+  const { data, error, reload } = useAsync(() => loadResearch(brand.id), [brand.id]);
 
   const lab = data?.find((r) => r.kind === "lab");
   // latest scan per topic

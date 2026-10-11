@@ -1,11 +1,12 @@
-import { downloadFile, must, sb } from "./supabase";
+import { downloadFile } from "./github";
 import { OverlayIn, Position, POSITIONS } from "./media";
+import { list } from "./store";
 import type { Asset } from "./types";
 
 export type OverlaySpec = { asset_id?: string; asset_kind?: string; position?: string; width_pct?: number };
 
 export async function loadAssets(brandId: string): Promise<Asset[]> {
-  return must(await sb.from("assets").select("*").eq("brand_id", brandId).order("created_at", { ascending: false }));
+  return (await list<Asset>(brandId, "assets")).sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
 /** Turn "logo, bottom-right, 14%" into your ORIGINAL uploaded file. */

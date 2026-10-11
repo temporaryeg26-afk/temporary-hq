@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useBrand } from "../App";
 import { Button, Copy, ErrorNote, PageHead, Panel, useAsync } from "../components/ui";
-import { latestLab } from "../lib/data";
+import { latestLab, loadContent, loadPlans, saveBrand } from "../lib/data";
 import { knowledgeFile } from "../lib/packs";
-import { must, sb } from "../lib/supabase";
-import type { BrandSettings, ContentItem, Pillar, Plan } from "../lib/types";
+import { collaborators, repoUrl } from "../lib/github";
+import type { BrandSettings, Pillar } from "../lib/types";
 
 const PILLARS: [Pillar, string][] = [
   ["discovery", "Discovery posts"],
@@ -20,24 +20,22 @@ export default function SettingsPage() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const team = useAsync(async () => must<{ email: string }[]>(await sb.from("team_members").select("email")), []);
+  const team = useAsync(() => collaborators(), []);
   const knowledge = useAsync(async () => {
-    const [plan, lab, approved] = await Promise.all([
-      sb.from("plans").select("*").eq("brand_id", brand.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      latestLab(brand.id),
-      sb.from("content_items").select("*").eq("brand_id", brand.id).in("status", ["approved", "published"]).order("scheduled_for", { ascending: false }).limit(30),
-    ]);
-    return knowledgeFile(brand, products, (plan.data as Plan) ?? null, lab, must<ContentItem[]>(approved));
+    const [plans, lab, content] = await Promise.all([loadPlans(brand.id), latestLab(brand.id), loadContent(brand.id)]);
+    const approved = content.filter((i) => i.status === "approved" || i.status === "published").reverse();
+    return knowledgeFile(brand, products, plans[0] ?? null, lab, approved);
   }, [brand.id]);
 
   const save = async () => {
     setBusy(true);
     setErr(null);
-    const r = await sb.from("brands").update({ settings: s }).eq("id", brand.id);
-    if (r.error) setErr(r.error.message);
-    else {
+    try {
+      await saveBrand(brand.id, { settings: s });
       await refresh();
       setMsg("Saved.");
+    } catch (e) {
+      setErr((e as Error).message);
     }
     setBusy(false);
   };
@@ -119,10 +117,18 @@ export default function SettingsPage() {
           <h2 className="wide pt-4 font-semibold">Who can open HQ</h2>
           <ul className="text-sm">
             {(team.data ?? []).map((t) => (
-              <li key={t.email}>{t.email}</li>
+              <li key={t.login}>
+                @{t.login} <span className="text-concrete">· {t.role}</span>
+              </li>
             ))}
           </ul>
-          <p className="text-xs text-concrete">The lock lives in the database. To change it, edit the team_members table in Supabase (SETUP.md, “Changing who has access”).</p>
+          <p className="text-xs text-concrete">
+            Only GitHub accounts invited to the private data repo can open HQ. Manage them in{" "}
+            <a className="text-ultra" href={`${repoUrl()}/settings/access`} target="_blank" rel="noreferrer">
+              the repo's Collaborators settings
+            </a>
+            .
+          </p>
         </Panel>
       </div>
     </div>

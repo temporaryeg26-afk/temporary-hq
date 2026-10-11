@@ -3,11 +3,12 @@ import { go, useBrand } from "../App";
 import Composer from "../components/Composer";
 import { aiName, Button, Copy, ErrorNote, Loading, Panel, Status, Text, useAsync } from "../components/ui";
 import { resolveOverlays } from "../lib/assets";
-import { log } from "../lib/data";
+import { loadContent, log } from "../lib/data";
 import { Aspect, composite } from "../lib/media";
 import { imagePromptFor, videoPromptFor } from "../lib/packs";
 import { checkRules } from "../lib/rules";
-import { currentEmail, downloadFile, must, removeFiles, sb, uploadFile } from "../lib/supabase";
+import { currentLogin, downloadFile, removeFiles, uploadFile } from "../lib/github";
+import { insert, list, mutate, newId, now, remove, update } from "../lib/store";
 import type { ContentItem, Media } from "../lib/types";
 import { overlayVideo } from "../lib/video";
 
@@ -38,8 +39,9 @@ export default function ContentDetail({ id }: { id: string }) {
   const [json, setJson] = useState("");
 
   const { data, error, reload } = useAsync(async () => {
-    const item = must<ContentItem>(await sb.from("content_items").select("*").eq("id", id).single());
-    const media = must<Media[]>(await sb.from("media").select("*").eq("content_id", id).order("created_at", { ascending: false }));
+    const item = (await loadContent(brand.id)).find((i) => i.id === id);
+    if (!item) throw new Error("This piece doesn't exist anymore.");
+    const media = (await list<Media>(brand.id, "media")).filter((m) => m.content_id === id).sort((a, b) => b.created_at.localeCompare(a.created_at));
     return { item, media };
   }, [id]);
 
@@ -63,8 +65,8 @@ export default function ContentDetail({ id }: { id: string }) {
   };
   const setStatus = (status: string, extra: Record<string, unknown> = {}) =>
     act(status, async () => {
-      must(await sb.from("content_items").update({ status, updated_at: new Date().toISOString(), ...extra }).eq("id", item.id));
-      await log(brand.id, `${await currentEmail()} marked "${item.title}" as ${status.replace("_", " ")}.`);
+      await update<ContentItem>(brand.id, "content", item.id, { status: status as ContentItem["status"], updated_at: now(), ...extra }, `${status}: ${item.title}`);
+      await log(brand.id, `${currentLogin()} marked "${item.title}" as ${status.replace("_", " ")}.`);
     });
 
   return (
@@ -104,8 +106,10 @@ export default function ContentDetail({ id }: { id: string }) {
             onClick={() =>
               act("del", async () => {
                 if (!confirm("Delete this piece and its visuals?")) return;
-                await removeFiles(media.flatMap((m) => [m.storage_path ?? "", m.base_path ?? ""]));
-                must(await sb.from("content_items").delete().eq("id", item.id));
+                await removeFiles(Array.from(new Set(media.flatMap((m) => [m.storage_path ?? "", m.base_path ?? ""]))));
+                const mids = new Set(media.map((m) => m.id));
+                if (mids.size) await mutate<Media>(brand.id, "media", (d) => d.filter((m) => !mids.has(m.id)), "remove visuals");
+                await remove(brand.id, "content", item.id, `delete: ${item.title}`);
                 go("/content");
               })
             }
@@ -132,7 +136,7 @@ export default function ContentDetail({ id }: { id: string }) {
                     act("save", async () => {
                       const output = JSON.parse(json);
                       const flags = checkRules(output, products, product?.code ?? null);
-                      must(await sb.from("content_items").update({ output, rule_flags: flags, updated_at: new Date().toISOString() }).eq("id", item.id));
+                      await update<ContentItem>(brand.id, "content", item.id, { output, rule_flags: flags, updated_at: now() }, `edit: ${item.title}`);
                       setEditing(false);
                     })
                   }
@@ -252,16 +256,14 @@ function SlotCard({ slot, item, media, onChange }: { slot: Slot; item: ContentIt
     setErr(null);
     try {
       const { overlays, missing } = await resolveOverlays(brand.id, overlaysSpec, item.product_id);
-      const id = crypto.randomUUID();
+      const id = newId();
       if (slot.kind === "image") {
         setProgress("Adding your original files and checking every pixel…");
         const r = await composite(file, slot.aspect, overlays);
-        const path = `${brand.id}/media/${id}.png`;
-        await uploadFile(path, r.blob, "image/png");
-        must(
-          await sb.from("media").insert({
+        const path = `${brand.id}/files/media/${id}.png`;
+        await uploadFile(path, r.blob, `HQ (${currentLogin()}): image for ${item.title}`);
+        await insert<Media>(brand.id, "media", {
             id,
-            brand_id: brand.id,
             content_id: item.id,
             kind: "image",
             slot: slot.key,
@@ -271,19 +273,17 @@ function SlotCard({ slot, item, media, onChange }: { slot: Slot; item: ContentIt
             base_path: path,
             fidelity: { method: "pixel", pass: r.pass, placements: r.placements, checks: r.checks, missing },
             note: missing.length ? `Not in your Assets yet: ${missing.join(", ")}` : null,
-            created_by: await currentEmail(),
-          })
-        );
+            created_by: currentLogin(),
+            created_at: now(),
+          }, "add image");
       } else {
         setProgress("Loading the video engine (first time ~30 MB)…");
         const out = await overlayVideo(file, overlays, (p) => setProgress(`Adding your logo… ${Math.round(p * 100)}%`));
-        const path = `${brand.id}/media/${id}.mp4`;
-        setProgress("Saving…");
-        await uploadFile(path, out, "video/mp4");
-        must(
-          await sb.from("media").insert({
+        const path = `${brand.id}/files/media/${id}.mp4`;
+        setProgress("Saving to GitHub…");
+        await uploadFile(path, out, `HQ (${currentLogin()}): video for ${item.title}`);
+        await insert<Media>(brand.id, "media", {
             id,
-            brand_id: brand.id,
             content_id: item.id,
             kind: "video",
             slot: slot.key,
@@ -292,9 +292,10 @@ function SlotCard({ slot, item, media, onChange }: { slot: Slot; item: ContentIt
             storage_path: path,
             fidelity: { method: "overlay", overlays: overlays.length, missing },
             note: "Logo burned on from your original file. Watch the video to confirm any garment print or mask looks right before posting.",
-            created_by: await currentEmail(),
-          })
-        );
+            created_by: currentLogin(),
+            created_at: now(),
+            base_path: null,
+          }, "add video");
       }
       onChange();
     } catch (e) {
@@ -377,6 +378,7 @@ function useBlobUrl(path: string | null) {
 }
 
 function MediaCard({ m, slotText, onChange }: { m: Media; slotText: string; onChange: () => void }) {
+  const { brand } = useBrand();
   const url = useBlobUrl(m.storage_path);
   const baseUrl = useBlobUrl(m.kind === "image" ? m.base_path : null);
   const [compose, setCompose] = useState(false);
@@ -415,7 +417,7 @@ function MediaCard({ m, slotText, onChange }: { m: Media; slotText: string; onCh
           className="text-concrete hover:text-brick"
           onClick={async () => {
             await removeFiles([m.storage_path ?? "", m.base_path && m.base_path !== m.storage_path ? m.base_path : ""]);
-            await sb.from("media").delete().eq("id", m.id);
+            await remove(brand.id, "media", m.id, "remove visual");
             onChange();
           }}
         >

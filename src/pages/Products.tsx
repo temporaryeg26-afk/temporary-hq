@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useBrand } from "../App";
 import { Button, ErrorNote, PageHead } from "../components/ui";
-import { sb } from "../lib/supabase";
+import { insert, newId, update } from "../lib/store";
 import type { Product } from "../lib/types";
 
 const STATUS: [Product["status"], string][] = [
@@ -15,14 +15,23 @@ export default function ProductsPage() {
   const [err, setErr] = useState<string | null>(null);
 
   const save = async (id: string, patch: Partial<Product>) => {
-    const r = await sb.from("products").update(patch).eq("id", id);
-    if (r.error) setErr(r.error.message);
+    try {
+      await update<Product>(brand.id, "products", id, patch, `product ${patch.name ?? ""}`);
+    } catch (e) {
+      setErr((e as Error).message);
+    }
     await refresh();
   };
   const add = async () => {
     const n = products.length + 1;
-    const r = await sb.from("products").insert({ brand_id: brand.id, code: String(n).padStart(2, "0"), name: "New product", sort: n });
-    if (r.error) setErr(r.error.message);
+    try {
+      await insert<Product>(brand.id, "products", {
+        id: newId(), code: String(n).padStart(2, "0"), name: "New product", category: "", price_egp: null, price_confirmed: false,
+        sizes: [], colors: [], specs: "", content_role: "", status: "not_released", edition_limit: 100, sold_count: 0, sort: n,
+      }, "add product");
+    } catch (e) {
+      setErr((e as Error).message);
+    }
     await refresh();
   };
 

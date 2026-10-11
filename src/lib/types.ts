@@ -16,11 +16,11 @@ export type Brand = {
   context: string;
   order_form_url: string;
   settings: BrandSettings;
+  created_at?: string;
 };
 
 export type Product = {
   id: string;
-  brand_id: string;
   code: string;
   name: string;
   category: string | null;
@@ -50,13 +50,14 @@ export type Asset = {
   height: number;
   sha256: string;
   protect_regions: Region[];
+  created_by?: string;
+  created_at: string;
 };
 
 export type Flag = { severity: "block" | "approval"; rule: string; detail: string };
 
 export type ContentItem = {
   id: string;
-  brand_id: string;
   plan_id: string | null;
   product_id: string | null;
   format: Format;
@@ -71,6 +72,7 @@ export type ContentItem = {
   revision_note: string | null;
   status: "brief" | "drafted" | "in_review" | "needs_you" | "approved" | "rejected" | "published";
   revisions: number;
+  created_at: string;
   updated_at: string;
 };
 
@@ -96,7 +98,10 @@ export type Media = {
   base_path: string | null;
   fidelity: any;
   note: string | null;
+  created_by?: string;
   created_at: string;
 };
 
 export type Research = { id: string; kind: "scan" | "lab"; topic: string; title: string; content: any; made_by: string; created_at: string };
+
+export type Activity = { id: string; message: string; level: "info" | "warn" | "error"; created_by: string; created_at: string };

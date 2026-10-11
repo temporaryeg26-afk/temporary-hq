@@ -1,22 +1,20 @@
 import { useBrand } from "../App";
-import { must, sb } from "../lib/supabase";
+import { loadContent, loadResearch } from "../lib/data";
+import { loadAssets } from "../lib/assets";
+import { list } from "../lib/store";
+import type { Activity } from "../lib/types";
 import { ErrorNote, Loading, PageHead, Panel, Status, useAsync } from "../components/ui";
 
 export default function Overview() {
   const { brand } = useBrand();
   const { data, error } = useAsync(async () => {
     const [items, assets, research, activity] = await Promise.all([
-      sb.from("content_items").select("status,format").eq("brand_id", brand.id),
-      sb.from("assets").select("kind").eq("brand_id", brand.id),
-      sb.from("research").select("kind,created_at").eq("brand_id", brand.id).order("created_at", { ascending: false }).limit(20),
-      sb.from("activity").select("*").eq("brand_id", brand.id).order("created_at", { ascending: false }).limit(15),
+      loadContent(brand.id),
+      loadAssets(brand.id),
+      loadResearch(brand.id),
+      list<Activity>(brand.id, "activity"),
     ]);
-    return {
-      items: must<{ status: string; format: string }[]>(items),
-      assets: must<{ kind: string }[]>(assets),
-      research: must<{ kind: string; created_at: string }[]>(research),
-      activity: must<{ id: string; message: string; level: string; created_at: string; created_by: string }[]>(activity),
-    };
+    return { items, assets, research, activity: activity.slice(0, 15) };
   }, [brand.id]);
 
   if (error) return <ErrorNote msg={error} />;

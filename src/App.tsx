@@ -1,7 +1,6 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
-import { configured, sb } from "./lib/supabase";
-import { loadBrand, loadBrands, loadProducts, setActiveBrand } from "./lib/data";
+import { DEFAULT_REPO, getSession, repoUrl, signIn, signOut } from "./lib/github";
+import { loadBrand, loadBrands, loadProducts, saveBrand, setActiveBrand } from "./lib/data";
 import type { Brand, Product } from "./lib/types";
 import { Button, ErrorNote } from "./components/ui";
 import Overview from "./pages/Overview";
@@ -52,7 +51,7 @@ function Shell({ children }: { children: ReactNode }) {
 
   const toggleManager = async () => {
     const next = manager === "claude" ? "chatgpt" : "claude";
-    await sb.from("brands").update({ settings: { ...brand.settings, manager: next } }).eq("id", brand.id);
+    await saveBrand(brand.id, { settings: { ...brand.settings, manager: next } });
     await refresh();
   };
 
@@ -82,8 +81,17 @@ function Shell({ children }: { children: ReactNode }) {
             );
           })}
           <div className="mt-6 px-3 text-xs text-concrete">
-            <p className="truncate">{email}</p>
-            <button className="mt-1 hover:text-plaster" onClick={() => sb.auth.signOut()}>
+            <p className="truncate">@{email}</p>
+            <a className="mt-1 block hover:text-plaster" href={repoUrl()} target="_blank" rel="noreferrer">
+              Data on GitHub
+            </a>
+            <button
+              className="mt-1 hover:text-plaster"
+              onClick={() => {
+                signOut();
+                window.location.reload();
+              }}
+            >
               Log out
             </button>
           </div>
@@ -137,78 +145,65 @@ function Node({ role, name, lit }: { role: string; name: string; lit?: boolean }
   );
 }
 
-// ------------------------------------------------------------------ login (email + 6-digit code)
+// ------------------------------------------------------------------ login (personal GitHub key)
 
-function Login({ notice }: { notice?: string }) {
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [sent, setSent] = useState(false);
+const TOKEN_URL = "https://github.com/settings/tokens/new?scopes=repo&description=TEMP.%20HQ";
+
+function Login({ onDone }: { onDone: () => void }) {
+  const [token, setToken] = useState("");
+  const [repo, setRepo] = useState(DEFAULT_REPO);
+  const [more, setMore] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(notice ?? null);
+  const [err, setErr] = useState<string | null>(null);
 
-  const send = async () => {
+  const go = async () => {
     setBusy(true);
     setErr(null);
-    const { error } = await sb.auth.signInWithOtp({
-      email: email.trim().toLowerCase(),
-      options: { shouldCreateUser: false, emailRedirectTo: window.location.href.split("#")[0] },
-    });
+    try {
+      await signIn(token, repo);
+      onDone();
+    } catch (e) {
+      setErr((e as Error).message);
+    }
     setBusy(false);
-    if (error) setErr(/signups not allowed|not found|otp_disabled/i.test(error.message) ? "This email doesn't have access to TEMP. HQ." : error.message);
-    else setSent(true);
-  };
-  const verify = async () => {
-    setBusy(true);
-    setErr(null);
-    const { error } = await sb.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: "email" });
-    setBusy(false);
-    if (error) setErr("That code didn't work. Check the latest email, or send a new code.");
   };
 
   return (
-    <main className="grid min-h-screen place-items-center px-4">
-      <div className="w-full max-w-sm">
+    <main className="grid min-h-screen place-items-center px-4 py-10">
+      <div className="w-full max-w-md">
         <p className="wide mb-1 text-3xl font-bold">TEMP. HQ</p>
         <p className="mb-8 text-concrete">Private. Team members only.</p>
-        {!sent ? (
-          <>
-            <label htmlFor="em">Your email</label>
-            <input id="em" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} />
-            <div className="mt-4">
-              <Button kind="primary" onClick={send} busy={busy} disabled={!email.includes("@")}>
-                Email me a login code
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="mb-3 text-sm">We sent a code to {email}. Enter it here, or tap the link in the email.</p>
-            <label htmlFor="code">Login code</label>
-            <input id="code" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && verify()} />
-            <div className="mt-4 flex gap-2">
-              <Button kind="primary" onClick={verify} busy={busy} disabled={code.trim().length < 6}>
-                Log in
-              </Button>
-              <Button kind="quiet" onClick={() => setSent(false)}>
-                Use another email
-              </Button>
-            </div>
-          </>
+        <ol className="mb-5 space-y-2 text-sm text-concrete">
+          <li>
+            1.{" "}
+            <a className="text-ultra hover:underline" href={TOKEN_URL} target="_blank" rel="noreferrer">
+              Create your GitHub key
+            </a>{" "}
+            (signed in to your own GitHub account). Set Expiration to 1 year, keep the <b className="text-plaster">repo</b> box ticked, click Generate token.
+          </li>
+          <li>2. Copy the key (starts with ghp_) and paste it below. You do this once per device.</li>
+        </ol>
+        <label htmlFor="tk">Your GitHub key</label>
+        <input id="tk" type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} onKeyDown={(e) => e.key === "Enter" && go()} placeholder="ghp_..." />
+        {more && (
+          <div className="mt-3">
+            <label htmlFor="rp">Private data repository</label>
+            <input id="rp" value={repo} onChange={(e) => setRepo(e.target.value)} />
+          </div>
         )}
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Button kind="primary" onClick={go} busy={busy} disabled={token.trim().length < 20}>
+            Open HQ
+          </Button>
+          {!more && (
+            <button className="text-sm text-concrete hover:text-plaster" onClick={() => setMore(true)}>
+              Different data repo?
+            </button>
+          )}
+        </div>
         <ErrorNote msg={err} />
+        <p className="mt-6 text-xs text-concrete">Your key stays in this browser only. Only accounts invited to the private data repo can open HQ.</p>
       </div>
-    </main>
-  );
-}
-
-function NotConfigured() {
-  return (
-    <main className="mx-auto max-w-xl px-4 py-20">
-      <p className="wide text-2xl font-bold">TEMP. HQ isn't connected yet</p>
-      <p className="mt-3 text-concrete">
-        Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> as repository variables on GitHub (Settings → Secrets and variables → Actions → Variables), then re-run the
-        “Deploy website” action. SETUP.md step 4 shows exactly where.
-      </p>
     </main>
   );
 }
@@ -216,60 +211,43 @@ function NotConfigured() {
 // ------------------------------------------------------------------ app
 
 export default function App() {
-  const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const [session, setSession] = useState(() => getSession());
   const [ctx, setCtx] = useState<Ctx | null>(null);
-  const [denied, setDenied] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const route = useRoute();
 
-  useEffect(() => {
-    if (!configured) return;
-    sb.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data } = sb.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => data.subscription.unsubscribe();
-  }, []);
-
   const refresh = useCallback(async () => {
     try {
-      const email = session?.user?.email ?? "";
-      // Retry a few times: right after login the request can briefly go out without the new login.
-      let team: { email: string }[] | null = null;
-      let lastErr: unknown = null;
-      for (let i = 0; i < 4 && !team?.length; i++) {
-        if (i > 0) await new Promise((r) => setTimeout(r, 700));
-        const res = await sb.from("team_members").select("email").limit(1);
-        team = res.data;
-        lastErr = res.error;
-      }
-      if (!team?.length) {
-        console.warn("TEMP. HQ access check failed", lastErr);
-        // Log out only this tab, never every tab and device.
-        await sb.auth.signOut({ scope: "local" });
-        setDenied("This email doesn't have access to TEMP. HQ.");
-        return;
-      }
       const [brand, brands] = await Promise.all([loadBrand(), loadBrands()]);
       const products = await loadProducts(brand.id);
-      setCtx({ brand, brands, products, email, refresh });
+      setCtx({ brand, brands, products, email: getSession()?.login ?? "", refresh });
       setErr(null);
     } catch (e) {
       setErr((e as Error).message);
     }
-  }, [session]);
+  }, []);
 
   useEffect(() => {
     if (session) refresh();
-    else setCtx(null);
   }, [session, refresh]);
 
-  if (!configured) return <NotConfigured />;
-  if (session === undefined) return null;
-  if (!session) return <Login notice={denied ?? undefined} />;
+  if (!session) return <Login onDone={() => setSession(getSession())} />;
   if (err)
     return (
       <main className="mx-auto max-w-xl px-4 py-20">
         <ErrorNote msg={err} />
-        <Button onClick={refresh}>Try again</Button>
+        <div className="flex gap-2">
+          <Button onClick={refresh}>Try again</Button>
+          <Button
+            kind="quiet"
+            onClick={() => {
+              signOut();
+              setSession(null);
+            }}
+          >
+            Log out
+          </Button>
+        </div>
       </main>
     );
   if (!ctx) return <p className="p-8 text-concrete">Opening HQ…</p>;

@@ -4,7 +4,7 @@ The private marketing headquarters for **TEMPORARY™**, ready for more brands l
 
 **Claude is the manager. ChatGPT writes. Flow and ChatGPT make the visuals. You approve.**
 
-The website is hosted free on GitHub Pages and contains no data. Everything private lives in Supabase (free plan), locked in the database to the two team emails.
+Everything runs on GitHub, free. This public repo is only the website, hosted on GitHub Pages. Your data lives in a separate **private** repo (`temporary-hq-data`) that only invited team accounts can open.
 
 First time? Follow **[SETUP.md](SETUP.md)**.
 
@@ -39,6 +39,6 @@ All of this runs in your browser, so no server is needed.
 
 ## Tech
 
-React + Vite (static site on GitHub Pages), Supabase (Postgres + private storage + email-code login, row-level security locked to `team_members`), canvas pixel checks, ffmpeg.wasm (self-hosted) for video.
+React + Vite (static site on GitHub Pages), a private GitHub repo as storage via the GitHub REST API (personal key per device), canvas pixel checks, ffmpeg.wasm (self-hosted) for video.
 
 Developer self-test of the pixel checks: `npm install && npm run dev`, then open `/scripts/harness.html`.

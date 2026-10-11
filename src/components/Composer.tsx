@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { verifyAgainstBase } from "../lib/media";
-import { downloadFile, sb, uploadFile } from "../lib/supabase";
+import { currentLogin, downloadFile, uploadFile } from "../lib/github";
+import { update } from "../lib/store";
+import { useBrand } from "../App";
 import type { Media, Placement } from "../lib/types";
 import { Button, isArabic } from "./ui";
 
@@ -9,6 +11,7 @@ import { Button, isArabic } from "./ui";
  * then re-checks that every locked file is still pixel-identical before saving.
  */
 export default function Composer({ media, imageUrl, initialText, onSaved }: { media: Media; imageUrl: string; initialText: string; onSaved: () => void }) {
+  const { brand } = useBrand();
   const canvas = useRef<HTMLCanvasElement>(null);
   const placements: Placement[] = media.fidelity?.placements ?? [];
   const [text, setText] = useState(initialText);
@@ -89,11 +92,8 @@ export default function Composer({ media, imageUrl, initialText, onSaved }: { me
       const v = await verifyAgainstBase(finalBlob, base, placements);
       if (!v.pass) throw new Error("The text covers a locked file (logo, artwork or mask). Move the text and save again.");
       const path = media.base_path.replace(/\.png$/, "-final.png");
-      await uploadFile(path, finalBlob, "image/png");
-      await sb
-        .from("media")
-        .update({ storage_path: path, fidelity: { ...media.fidelity, finalised: true, finalChecks: v.checks } })
-        .eq("id", media.id);
+      await uploadFile(path, finalBlob, `HQ (${currentLogin()}): final image with text`);
+      await update<Media>(brand.id, "media", media.id, { storage_path: path, fidelity: { ...media.fidelity, finalised: true, finalChecks: v.checks } }, "final image");
       setMsg("Saved. Locked files verified untouched.");
       onSaved();
     } catch (e) {

@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useBrand } from "../App";
 import { Button, ErrorNote, PageHead, Panel } from "../components/ui";
-import { setActiveBrand } from "../lib/data";
-import { must, sb } from "../lib/supabase";
+import { createBrand, saveBrand, setActiveBrand } from "../lib/data";
 
 export default function BrandsPage() {
   const { brand, brands, refresh } = useBrand();
@@ -69,7 +68,7 @@ export default function BrandsPage() {
           busy={busy === "save"}
           onClick={() =>
             run("save", async () => {
-              must(await sb.from("brands").update({ name, order_form_url: form, context: ctx }).eq("id", brand.id));
+              await saveBrand(brand.id, { name, order_form_url: form, context: ctx });
               await refresh();
               setMsg("Saved.");
             })
@@ -95,8 +94,7 @@ export default function BrandsPage() {
           busy={busy === "new"}
           onClick={() =>
             run("new", async () => {
-              const slug = newName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Date.now().toString(36);
-              const b = must<{ id: string }>(await sb.from("brands").insert({ name: newName, slug, context: newCtx }).select().single());
+              const b = await createBrand(newName, newCtx);
               setActiveBrand(b.id);
               window.location.reload();
             })

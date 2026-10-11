@@ -5,7 +5,8 @@ import { loadAssets } from "../lib/assets";
 import { log } from "../lib/data";
 import { bitmap, restoreProtected, sha256 } from "../lib/media";
 import { photoEditPrompt } from "../lib/packs";
-import { currentEmail, downloadFile, fileUrl, must, removeFiles, sb, uploadFile } from "../lib/supabase";
+import { currentLogin, downloadFile, fileUrl, removeFiles, uploadFile } from "../lib/github";
+import { insert, list, newId, now, remove, update } from "../lib/store";
 import type { Asset, Media, Region } from "../lib/types";
 
 const KINDS: [Asset["kind"], string, string][] = [
@@ -35,11 +36,9 @@ export default function AssetsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { data, error, reload } = useAsync(async () => {
-    const [assets, edits] = await Promise.all([
-      loadAssets(brand.id),
-      sb.from("media").select("*").eq("brand_id", brand.id).eq("slot", "photo-edit").order("created_at", { ascending: false }).limit(24),
-    ]);
-    return { assets, edits: must<Media[]>(edits) };
+    const [assets, media] = await Promise.all([loadAssets(brand.id), list<Media>(brand.id, "media")]);
+    const edits = media.filter((m) => m.slot === "photo-edit").sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 24);
+    return { assets, edits };
   }, [brand.id]);
 
   const upload = async (files: FileList | null) => {
@@ -47,15 +46,15 @@ export default function AssetsPage() {
     setBusy(true);
     setErr(null);
     try {
+      const rows: Asset[] = [];
       for (const f of Array.from(files)) {
         const bm = await bitmap(f).catch(() => {
           throw new Error(`${f.name} isn't an image the browser can read (use PNG, JPG or WEBP).`);
         });
-        const path = `${brand.id}/assets/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-        await uploadFile(path, f, f.type || "image/png"); // stored exactly as uploaded
-        must(
-          await sb.from("assets").insert({
-            brand_id: brand.id,
+        const path = `${brand.id}/files/assets/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+        await uploadFile(path, f, `HQ (${currentLogin()}): upload ${kind} ${f.name}`); // stored exactly as uploaded
+        rows.push({
+            id: newId(),
             kind,
             locked: kind !== "reference",
             label: f.name.replace(/\.[^.]+$/, ""),
@@ -65,10 +64,12 @@ export default function AssetsPage() {
             width: bm.width,
             height: bm.height,
             sha256: await sha256(f),
-            created_by: await currentEmail(),
-          })
-        );
+            protect_regions: [],
+            created_by: currentLogin(),
+            created_at: now(),
+          });
       }
+      await insert<Asset>(brand.id, "assets", rows, `add ${rows.length} ${kind}`);
       await log(brand.id, `Uploaded ${files.length} ${kind.replace("_", " ")} file(s).`);
       await reload();
     } catch (e) {
@@ -79,8 +80,11 @@ export default function AssetsPage() {
   };
 
   const patch = async (id: string, body: Partial<Asset>) => {
-    const r = await sb.from("assets").update(body).eq("id", id);
-    if (r.error) setErr(r.error.message);
+    try {
+      await update<Asset>(brand.id, "assets", id, body, "update asset");
+    } catch (e) {
+      setErr((e as Error).message);
+    }
     await reload();
   };
 
@@ -157,7 +161,7 @@ export default function AssetsPage() {
                       onClick={async () => {
                         if (!confirm(`Delete ${a.label}?`)) return;
                         await removeFiles([a.storage_path]);
-                        await sb.from("assets").delete().eq("id", a.id);
+                        await remove(brand.id, "assets", a.id, `delete ${a.label}`);
                         reload();
                       }}
                     >
@@ -176,7 +180,7 @@ export default function AssetsPage() {
           <h2 className="wide mb-3 font-semibold">AI photo edits</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {data!.edits.map((m) => (
-              <EditCard key={m.id} m={m} onRemove={reload} />
+              <EditCard key={m.id} m={m} brandId={brand.id} onRemove={reload} />
             ))}
           </div>
         </section>
@@ -188,7 +192,7 @@ export default function AssetsPage() {
   );
 }
 
-function EditCard({ m, onRemove }: { m: Media; onRemove: () => void }) {
+function EditCard({ m, brandId, onRemove }: { m: Media; brandId: string; onRemove: () => void }) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     let u = "";
@@ -214,7 +218,7 @@ function EditCard({ m, onRemove }: { m: Media; onRemove: () => void }) {
           className="text-concrete hover:text-brick"
           onClick={async () => {
             await removeFiles([m.storage_path ?? ""]);
-            await sb.from("media").delete().eq("id", m.id);
+            await remove(brandId, "media", m.id, "remove photo edit");
             onRemove();
           }}
         >
@@ -302,13 +306,13 @@ function EditPhoto({ asset, onClose }: { asset: Asset; onClose: () => void }) {
     try {
       const original = await downloadFile(asset.storage_path);
       const r = await restoreProtected(original, file, asset.protect_regions);
-      const id = crypto.randomUUID();
-      const path = `${brand.id}/edits/${id}.png`;
-      await uploadFile(path, r.blob, "image/png");
-      must(
-        await sb.from("media").insert({
+      const id = newId();
+      const path = `${brand.id}/files/edits/${id}.png`;
+      await uploadFile(path, r.blob, `HQ (${currentLogin()}): photo edit`);
+      await insert<Media>(brand.id, "media", {
           id,
-          brand_id: brand.id,
+          content_id: null,
+          base_path: null,
           kind: "image",
           slot: "photo-edit",
           made_with: madeWith,
@@ -316,9 +320,9 @@ function EditPhoto({ asset, onClose }: { asset: Asset; onClose: () => void }) {
           storage_path: path,
           fidelity: { method: "protected-regions", pass: r.pass, checks: r.checks, source: asset.id },
           note: instruction,
-          created_by: await currentEmail(),
-        })
-      );
+          created_by: currentLogin(),
+          created_at: now(),
+        }, "add photo edit");
       onClose();
     } catch (e) {
       setErr((e as Error).message);

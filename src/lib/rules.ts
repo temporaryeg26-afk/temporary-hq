@@ -37,8 +37,8 @@ export function autofix<T>(value: T): T {
     if (v && typeof v === "object") {
       const o: Record<string, unknown> = {};
       for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
-        // never rewrite generation prompts' asset references
-        o[k] = walk(x);
+        // hashtags can't contain ™; prompts for image/video models must not mention the brand at all
+        o[k] = k === "hashtags" || k.endsWith("_prompt") ? x : walk(x);
       }
       return o;
     }

@@ -2,9 +2,8 @@ import { useRef, useState } from "react";
 import { useBrand } from "../App";
 import Relay from "../components/Relay";
 import { aiName, Button, ErrorNote, PageHead, Panel, Status, useAsync } from "../components/ui";
-import { applyReview, applyWriting, createPiece, latestLab } from "../lib/data";
+import { applyReview, applyWriting, createPiece, latestLab, loadContent } from "../lib/data";
 import { reviewPack, writePack } from "../lib/packs";
-import { must, sb } from "../lib/supabase";
 import type { ContentItem } from "../lib/types";
 
 const FILTERS: [string, string][] = [
@@ -25,10 +24,7 @@ export default function ContentPage() {
   const writing = useRef<ContentItem[]>([]);
   const reviewing = useRef<ContentItem[]>([]);
 
-  const { data, error, reload } = useAsync(
-    async () => must<ContentItem[]>(await sb.from("content_items").select("*").eq("brand_id", brand.id).order("scheduled_for").limit(400)),
-    [brand.id]
-  );
+  const { data, error, reload } = useAsync(() => loadContent(brand.id), [brand.id]);
   const items = data ?? [];
   const toWrite = items.filter((i) => i.status === "brief");
   const toReview = items.filter((i) => i.status === "in_review");

@@ -2,10 +2,8 @@ import { useState } from "react";
 import { useBrand } from "../App";
 import Relay from "../components/Relay";
 import { aiName, ErrorNote, PageHead, Panel, Status, Text, useAsync } from "../components/ui";
-import { applyPlan, latestLab } from "../lib/data";
+import { applyPlan, latestLab, loadContent, loadPlans } from "../lib/data";
 import { planPack } from "../lib/packs";
-import { must, sb } from "../lib/supabase";
-import type { ContentItem, Plan } from "../lib/types";
 
 export default function PlanPage() {
   const { brand, products } = useBrand();
@@ -15,11 +13,8 @@ export default function PlanPage() {
   const [start, setStart] = useState(new Date(Date.now() + 86400000).toISOString().slice(0, 10));
 
   const { data, error, reload } = useAsync(async () => {
-    const [plans, items] = await Promise.all([
-      sb.from("plans").select("*").eq("brand_id", brand.id).order("created_at", { ascending: false }).limit(6),
-      sb.from("content_items").select("id,format,pillar,title,scheduled_for,status").eq("brand_id", brand.id).order("scheduled_for").limit(400),
-    ]);
-    return { plans: must<Plan[]>(plans), items: must<ContentItem[]>(items) };
+    const [plans, items] = await Promise.all([loadPlans(brand.id), loadContent(brand.id)]);
+    return { plans: plans.slice(0, 6), items };
   }, [brand.id]);
 
   const latest = data?.plans[0];

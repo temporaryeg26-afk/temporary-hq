@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "TEMP. HQ \u2014 private marketing headquarters for TEMPORARY\u2122. Hosted on GitHub Pages, data in Supabase, locked to two emails.",
+  "description": "TEMP. HQ — private marketing headquarters for TEMPORARY™. Hosted on GitHub Pages, data in a private GitHub repo.",
   "scripts": {
     "predev": "node scripts/copy-ffmpeg.mjs",
     "dev": "vite",
@@ -15,7 +15,6 @@
     "@ffmpeg/core": "^0.12.10",
     "@ffmpeg/ffmpeg": "0.12.15",
     "@ffmpeg/util": "0.12.2",
-    "@supabase/supabase-js": "^2.117.3",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
