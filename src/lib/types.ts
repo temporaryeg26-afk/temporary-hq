@@ -1,5 +1,5 @@
-export type Format = "reel" | "carousel" | "static" | "story";
-export type Pillar = "discovery" | "philosophy" | "product" | "community" | "conversion";
+export type Format = "reel" | "carousel" | "static" | "story" | "founder_video" | "motion_carousel";
+export type Pillar = "discovery" | "philosophy" | "product" | "community" | "conversion" | "doctrine";
 
 export type BrandSettings = {
   /** Where manager packs go. Switch to "chatgpt" if Claude hits its limit. */
@@ -16,7 +16,25 @@ export type Brand = {
   context: string;
   order_form_url: string;
   settings: BrandSettings;
+  /** The brand's worldview. Every pack sent to Claude / ChatGPT includes it. */
+  doctrine?: Doctrine;
   created_at?: string;
+};
+
+export type Doctrine = {
+  belief: string;
+  manifesto: string;
+  for_who: string;
+  enemy: string;
+  promise: string;
+  voice: string;
+  words_we_use: string;
+  words_we_never_use: string;
+  symbols: string;
+  rituals: string;
+  signature_series: string;
+  future_vision: string;
+  updated_at?: string;
 };
 
 export type Product = {
@@ -105,3 +123,13 @@ export type Media = {
 export type Research = { id: string; kind: "scan" | "lab"; topic: string; title: string; content: any; made_by: string; created_at: string };
 
 export type Activity = { id: string; message: string; level: "info" | "warn" | "error"; created_by: string; created_at: string };
+
+export type Session = {
+  id: string;
+  period_start: string;
+  days: number;
+  review: { wins: string[]; misses: string[]; lessons: string[]; doctrine_check: string; next_focus: string; next_goal: string; bold_bets: string[] } | null;
+  notes: string;
+  made_by: string;
+  created_at: string;
+};
