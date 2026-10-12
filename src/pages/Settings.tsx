@@ -12,6 +12,7 @@ const PILLARS: [Pillar, string][] = [
   ["community", "Community posts"],
   ["product", "Product posts"],
   ["conversion", "Conversion posts"],
+  ["doctrine", "Doctrine posts"],
 ];
 
 export default function SettingsPage() {
