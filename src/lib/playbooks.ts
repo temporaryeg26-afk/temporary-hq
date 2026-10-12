@@ -83,7 +83,7 @@ export const PAID_STEPS: Step[] = [
       "Location: Cairo + Giza (+25 km) and Alexandria. Age 18–30. Language: Arabic + English.",
       "Audience: start broad (Advantage+ audience on) — the post itself finds the right people. Exclude people who already follow the account.",
       "Placements: Instagram only — Feed, Reels, Stories, Explore.",
-      "Budget: EGP 150–250 a day for 3 days (≈ EGP 450–750 per test). A Meta Egypt CPM of ≈$2.90 means roughly 50–90k impressions per test (estimate).",
+      "Budget: EGP 250–500 a day for 3 days (≈ EGP 750–1,500 per test). At a Meta Egypt CPM of ≈$2.90 and ≈ EGP 50 per $, that buys roughly 5,000–10,000 impressions per test (estimate — the first test gives us the real number).",
       "AI disclosure: turn on the 'AI-generated' label if the creative is AI-made.",
       "Fill everything, then STOP. Show the summary to the owner.",
     ],
