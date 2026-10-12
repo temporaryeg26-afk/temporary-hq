@@ -20,7 +20,7 @@ function prefillPlan(goal: string, days: number) {
 const STEPS: { n: number; title: string; why: string; href: string }[] = [
   { n: 1, title: "Review the last period", why: "What worked, what didn't, what we learned. Done right here, below.", href: "/session" },
   { n: 2, title: "Check the doctrine", why: "Is the worldview still right? Sharpen it before planning.", href: "/doctrine" },
-  { n: 3, title: "Trend Radar", why: "Fresh research, trends to ride and trends to start.", href: "/research" },
+  { n: 3, title: "Research", why: "Quick refresh: new complaints and trends.", href: "/research" },
   { n: 4, title: "Plan the period", why: "The manager plans every piece. The goal from this session is pre-filled.", href: "/plan" },
   { n: 5, title: "Write & review", why: "ChatGPT writes the batch, the manager reviews it.", href: "/content" },
   { n: 6, title: "Make the visuals", why: "Founder film scenes, images, motion carousels. Your locked files go on top.", href: "/content" },

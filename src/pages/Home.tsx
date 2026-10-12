@@ -39,7 +39,7 @@ export default function Home() {
   const items = data.items.filter((i) => i.status !== "rejected");
   const by = (f: (i: ContentItem) => boolean) => items.filter(f);
   const has = (k: string) => data.assets.some((a) => a.kind === k);
-  const report = data.research[0] ?? null;
+  const report = data.research.find((r) => r.kind === "report") ?? null;
 
   // ---------------------------------------------------------------- what's needed from you
   const needs: Need[] = [];
