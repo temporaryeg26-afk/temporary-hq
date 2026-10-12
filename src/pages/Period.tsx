@@ -44,7 +44,7 @@ export default function PeriodPage({ isNew }: { isNew?: boolean }) {
 
   if (error) return <ErrorNote msg={error} />;
   if (!data) return <Loading />;
-  if (isNew || !data.active) return <NewPeriod hasActive={Boolean(data.active)} onDone={() => go("/period")} />;
+  if (isNew || !data.active) return <NewPeriod hasActive={Boolean(data.active)} onDone={async () => { await reload(); go("/period"); }} />;
 
   const p = data.active;
   const last = data.periods.find((x) => x.status === "done") ?? null;
@@ -147,7 +147,7 @@ export default function PeriodPage({ isNew }: { isNew?: boolean }) {
   );
 }
 
-function NewPeriod({ hasActive, onDone }: { hasActive: boolean; onDone: () => void }) {
+function NewPeriod({ hasActive, onDone }: { hasActive: boolean; onDone: () => void | Promise<void> }) {
   const { brand } = useBrand();
   const today = iso(new Date());
   const [name, setName] = useState("");
@@ -164,7 +164,8 @@ function NewPeriod({ hasActive, onDone }: { hasActive: boolean; onDone: () => vo
     setErr(null);
     try {
       await createPeriod(brand, { name: name.trim(), start, end, goal: goal.trim(), notes: notes.trim() });
-      onDone();
+      await onDone();
+      return;
     } catch (e) {
       setErr((e as Error).message);
     }
