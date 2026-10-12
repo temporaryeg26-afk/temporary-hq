@@ -7,6 +7,7 @@ import Home from "./pages/Home";
 import ResearchPage from "./pages/Research";
 import ResearchHQ from "./pages/ResearchHQ";
 import PeriodPage from "./pages/Period";
+import Studio from "./pages/Studio";
 import PlanPage from "./pages/Plan";
 import ContentPage from "./pages/Content";
 import ContentDetail from "./pages/ContentDetail";
@@ -47,12 +48,14 @@ export const ROOMS: Room[] = [
   {
     key: "studio",
     label: "Studio",
-    what: "Everything that gets posted: this week, all pieces, the plan and the period review.",
+    what: "Everything that gets posted: calendar, the Instagram grid, approvals and this week's posting list.",
     pages: [
+      ["/calendar", "Calendar"],
+      ["/grid", "Grid"],
+      ["/approve", "Approvals"],
       ["/week", "This week"],
       ["/content", "All pieces"],
       ["/plan", "Plan"],
-      ["/session", "Period review"],
     ],
   },
   {
@@ -319,6 +322,9 @@ export default function App() {
 
   const page = (() => {
     switch (path) {
+      case "/calendar": return <Studio view="calendar" />;
+      case "/grid": return <Studio view="grid" />;
+      case "/approve": return <Studio view="approve" />;
       case "/week": return <WeekPage />;
       case "/ads": return <AdsPage />;
       case "/orders": return <OrdersPage />;
