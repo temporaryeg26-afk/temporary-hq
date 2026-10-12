@@ -21,7 +21,7 @@ export const ORGANIC = {
     "Lines 2–4 = the useful part (the checklist, the fact, the proof).",
     "End with one ask that creates SENDS: «ابعتها لصاحبك اللي لسه دافع 1,500 في تيشيرت».",
     "Write the words people search: تيشيرت، هودي، براند مصري، جودة، قماش، مقاسات.",
-    "AI-made video? Say so in the caption.",
+    "Founder film? No AI note in the caption — switch on Instagram's 'AI info' label in the post settings instead.",
   ],
   hashtags: "3–5 niche tags, the same core set each time: #براند_مصري #ستريت_وير #اعرف_قبل_ما_تدفع + 1–2 topic tags. No giant generic tags.",
   times: [
@@ -84,7 +84,7 @@ export const PAID_STEPS: Step[] = [
       "Audience: start broad (Advantage+ audience on) — the post itself finds the right people. Exclude people who already follow the account.",
       "Placements: Instagram only — Feed, Reels, Stories, Explore.",
       "Budget: EGP 250–500 a day for 3 days (≈ EGP 750–1,500 per test). At a Meta Egypt CPM of ≈$2.90 and ≈ EGP 50 per $, that buys roughly 5,000–10,000 impressions per test (estimate — the first test gives us the real number).",
-      "AI disclosure: turn on the 'AI-generated' label if the creative is AI-made.",
+      "If the creative is realistic AI video (the founder films), switch on Meta's AI label in the ad settings — required for ads.",
       "Fill everything, then STOP. Show the summary to the owner.",
     ],
     done_when: "Everything is filled and the summary is shown — Publish not pressed.",

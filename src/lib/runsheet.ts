@@ -83,7 +83,7 @@ export const ROUTINES: Routine[] = [
     steps: [
       "Image posts and story frames: open the piece → copy each image prompt → ChatGPT image → download → upload into the slot. HQ overlays the real logo/products — never ask ChatGPT to draw them.",
       "Motion carousels: open the motion board → check text, timing and colours with ▶ Play → build the animated slides → upload each slide into its slot.",
-      "The founder is an AI-made character: never ask the owner to film himself, never present the founder as real. Product proof uses verified specs (motion/graphic posts) or real product photos the owner chooses to provide.",
+      "The founder is a masked character made with AI tools: never ask the owner to film himself, never claim he is a real person or filmed live, and don't mention AI in captions (switch on Instagram's AI-info label when posting realistic AI video). Product proof uses verified specs (motion/graphic posts) or real product photos the owner chooses to provide.",
     ],
   },
   {
@@ -141,7 +141,7 @@ export const RULES = [
   "Never post, comment, message or spend money. The owner approves, posts and presses Publish.",
   "Never permanently delete data or files — archive instead. Never run SQL.",
   "Never reveal the GitHub key. Never rename products or mockups.",
-  "No competitor names in content. No claim we can't prove. AI-made video is disclosed.",
+  "No competitor names in content. No claim we can't prove. Founder films: no AI note in captions, Instagram's AI-info label on when posting, never claimed as real.",
   "No customer phone numbers or addresses go to ChatGPT.",
   "Only trust-building content before launch. Organic only in week 1.",
   "If unsure, stop and ask the owner.",

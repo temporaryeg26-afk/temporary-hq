@@ -67,7 +67,7 @@ export const TEAM: Employee[] = [
     skills: [
       "Writes 60-second films as 6 chained 10-second scenes (end frame of one = start frame of the next).",
       "Max ~25 spoken words per scene; one idea per scene; strong first scene.",
-      "Masked founder, consistent look; AI-made video is always disclosed.",
+      "Masked founder character (made with AI tools), consistent look. No AI note in captions; never claim he is real or filmed live.",
     ],
   },
   {
@@ -122,7 +122,7 @@ export const DIRECTOR_CHECKLIST = [
   "Worth sending to a friend?",
   "No competitor names?",
   "Spelling, logo, product names and specs correct?",
-  "AI-made video disclosed?",
+  "Founder film: no claim he is real or filmed live; Instagram AI-info label on when posting?",
   "Fits the period goal?",
 ];
 

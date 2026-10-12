@@ -440,3 +440,29 @@ export async function movePeriod(brand: Brand, period: Period, patch: { name: st
   if (shift) await mutate<Task>(brand.id, "tasks", (d) => d.map((t) => (t.period_id === period.id && t.status !== "done" ? { ...t, due: mv(t.due) } : t)), `move tasks ${shift} days`);
   await log(brand.id, `Period "${patch.name}" now ${patch.start} → ${patch.end}${shift ? ` (roadmap moved ${shift} days)` : ""}.`);
 }
+
+/** Archive a plan: its unposted pieces are hidden (status "rejected", note "archived") — nothing is deleted, and it can be undone. */
+export async function archivePlan(brand: Brand, planId: string, undo = false) {
+  let n = 0;
+  await mutate<ContentItem>(
+    brand.id,
+    "content",
+    (d) =>
+      d.map((x) => {
+        if (x.plan_id !== planId || x.status === "published") return x;
+        if (!undo && x.status !== "rejected") {
+          n++;
+          return { ...x, status: "rejected" as const, revision_note: `archived (was ${x.status})`, updated_at: now() };
+        }
+        if (undo && x.status === "rejected" && (x.revision_note ?? "").startsWith("archived (was ")) {
+          n++;
+          const was = (x.revision_note ?? "").match(/was (\w+)/)?.[1] as ContentItem["status"] | undefined;
+          return { ...x, status: was ?? "brief", revision_note: null, updated_at: now() };
+        }
+        return x;
+      }),
+    `${undo ? "restore" : "archive"} plan pieces`,
+  );
+  await log(brand.id, `${currentLogin()} ${undo ? "restored" : "archived"} ${n} pieces of an old plan.`);
+  return n;
+}
