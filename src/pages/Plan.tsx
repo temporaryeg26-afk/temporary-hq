@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useBrand } from "../App";
 import Relay from "../components/Relay";
 import { aiName, ErrorNote, PageHead, Panel, Status, Text, useAsync } from "../components/ui";
-import { applyPlan, latestLab, loadContent, loadPlans } from "../lib/data";
+import { applyPlan, archivePlan, latestLab, loadContent, loadPlans } from "../lib/data";
 import { planPack } from "../lib/packs";
 import { PLAN_PREFILL_KEY } from "./Session";
 
@@ -90,6 +90,52 @@ export default function PlanPage() {
           </div>
           {(latest.data?.kpis ?? []).length > 0 && <p className="mt-4 text-sm text-concrete">Measured by: {latest.data.kpis.join(", ")}</p>}
         </Panel>
+      )}
+
+      {(data?.plans.length ?? 0) > 1 && (
+        <section className="mt-8">
+          <h2 className="wide mb-3 font-semibold">All plans</h2>
+          <ul className="divide-y divide-rule rounded-panel border border-rule text-sm">
+            {data!.plans.map((pl) => {
+              const pieces = data!.items.filter((i) => i.plan_id === pl.id);
+              const live = pieces.filter((i) => i.status !== "rejected").length;
+              const archived = pieces.filter((i) => i.status === "rejected" && (i.revision_note ?? "").startsWith("archived")).length;
+              return (
+                <li key={pl.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+                  <span dir="auto">
+                    <span className="text-concrete">{pl.created_at.slice(0, 10)} · </span>
+                    {pl.title} <span className="text-concrete">· {live} active{archived ? ` · ${archived} archived` : ""}</span>
+                  </span>
+                  <span className="flex gap-3">
+                    {live > 0 && (
+                      <button
+                        className="text-ultra hover:underline"
+                        onClick={async () => {
+                          if (!confirm(`Archive the ${live} unposted pieces of "${pl.title}"? They are hidden, not deleted, and can be restored.`)) return;
+                          await archivePlan(brand, pl.id);
+                          await reload();
+                        }}
+                      >
+                        Archive
+                      </button>
+                    )}
+                    {archived > 0 && (
+                      <button
+                        className="text-concrete hover:text-plaster"
+                        onClick={async () => {
+                          await archivePlan(brand, pl.id, true);
+                          await reload();
+                        }}
+                      >
+                        Restore
+                      </button>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
 
       {(data?.items.length ?? 0) > 0 && (
