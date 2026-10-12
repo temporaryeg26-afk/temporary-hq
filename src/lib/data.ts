@@ -1,10 +1,10 @@
 import { currentLogin, mutateJSON, readJSON } from "./github";
 import { autofix, checkRules } from "./rules";
 import { insert, list, mutate, newId, now } from "./store";
-import type { Activity, Brand, ContentItem, Plan, Product, Research } from "./types";
+import type { Activity, Brand, ContentItem, Doctrine, Plan, Product, Research, Session } from "./types";
 
-const FORMATS = ["reel", "carousel", "static", "story"];
-const PILLARS = ["discovery", "philosophy", "product", "community", "conversion"];
+const FORMATS = ["reel", "carousel", "static", "story", "founder_video", "motion_carousel"];
+const PILLARS = ["discovery", "philosophy", "product", "community", "conversion", "doctrine"];
 
 // ------------------------------------------------------------------ brands
 
@@ -226,4 +226,55 @@ export async function createPiece(brand: Brand, products: Product[], b: { format
     updated_at: now(),
   };
   await insert(brand.id, "content", row, "new piece");
+}
+
+// ------------------------------------------------------------------ doctrine & sessions
+
+const DOCTRINE_KEYS: (keyof Doctrine)[] = ["belief", "manifesto", "for_who", "enemy", "promise", "voice", "words_we_use", "words_we_never_use", "symbols", "rituals", "signature_series", "future_vision"];
+
+export function asDoctrine(json: any): Doctrine {
+  const d = {} as Doctrine;
+  let filled = 0;
+  for (const k of DOCTRINE_KEYS) {
+    const v = json?.[k];
+    const text = Array.isArray(v) ? v.join("\n") : v == null ? "" : String(v);
+    (d as any)[k] = text;
+    if (text.trim()) filled++;
+  }
+  if (filled < 4) throw new Error("That doesn't look like a doctrine (too few fields filled).");
+  return d;
+}
+
+export async function saveDoctrine(brand: Brand, d: Doctrine, by: string) {
+  await saveBrand(brand.id, { doctrine: { ...d, updated_at: now() } });
+  await log(brand.id, `${by} updated the doctrine.`);
+}
+
+export async function loadSessions(brandId: string): Promise<Session[]> {
+  return (await list<Session>(brandId, "sessions")).sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export async function applySession(brand: Brand, json: any, by: string, days: number, notes: string) {
+  if (!json?.next_goal && !json?.wins) throw new Error("That doesn't look like a session review (no next_goal / wins).");
+  const arr = (v: any) => (Array.isArray(v) ? v.map(String) : v ? [String(v)] : []);
+  const s: Session = {
+    id: newId(),
+    period_start: new Date().toISOString().slice(0, 10),
+    days,
+    review: {
+      wins: arr(json.wins),
+      misses: arr(json.misses),
+      lessons: arr(json.lessons),
+      doctrine_check: String(json.doctrine_check ?? ""),
+      next_focus: String(json.next_focus ?? ""),
+      next_goal: String(json.next_goal ?? ""),
+      bold_bets: arr(json.bold_bets),
+    },
+    notes,
+    made_by: by,
+    created_at: now(),
+  };
+  await insert(brand.id, "sessions", s, "session review");
+  await log(brand.id, `${who(by)} ran the ${days}-day session: ${s.review!.next_focus}`);
+  return s;
 }
