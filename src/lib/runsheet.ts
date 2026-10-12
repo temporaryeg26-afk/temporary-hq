@@ -83,7 +83,7 @@ export const ROUTINES: Routine[] = [
     steps: [
       "Image posts and story frames: open the piece → copy each image prompt → ChatGPT image → download → upload into the slot. HQ overlays the real logo/products — never ask ChatGPT to draw them.",
       "Motion carousels: open the motion board → check text, timing and colours with ▶ Play → build the animated slides → upload each slide into its slot.",
-      "Anything that needs real footage (wash tests, fabric close-ups): put it in “Needed from you” with an exact shot list.",
+      "The founder is an AI-made character: never ask the owner to film himself, never present the founder as real. Product proof uses verified specs (motion/graphic posts) or real product photos the owner chooses to provide.",
     ],
   },
   {
