@@ -23,6 +23,17 @@ function slotsFor(item: ContentItem): Slot[] {
     return (o.slides ?? []).map((s: any) => ({ key: `slide-${s.n}`, label: `Slide ${s.n}`, kind: "image", prompt: s.image_prompt ?? s.visual ?? "", text: s.copy ?? "", aspect: "4:5" as Aspect }));
   if (item.format === "story")
     return (o.frames ?? []).map((f: any) => ({ key: `frame-${f.n}`, label: `Frame ${f.n}`, kind: "image", prompt: f.image_prompt ?? f.visual ?? "", text: f.text ?? "", aspect: "9:16" as Aspect }));
+  if (item.format === "founder_video")
+    return (o.scenes ?? []).map((sc: any) => ({
+      key: `scene-${sc.n}`,
+      label: `Scene ${sc.n} (10s)`,
+      kind: "video",
+      prompt: [sc.video_prompt ?? sc.visual ?? "", sc.start_frame ? `Starts on: ${sc.start_frame}.` : "", sc.end_frame ? `Ends on: ${sc.end_frame}.` : "", "Exactly 10 seconds."].filter(Boolean).join(" "),
+      text: sc.on_screen_text ?? "",
+      aspect: "9:16" as Aspect,
+    }));
+  if (item.format === "motion_carousel")
+    return (o.slides ?? []).map((s: any) => ({ key: `slide-${s.n}`, label: `Slide ${s.n} (motion)`, kind: "video", prompt: s.motion ?? "", text: s.copy ?? "", aspect: "4:5" as Aspect }));
   if (item.format === "static") return [{ key: "post", label: "Post image", kind: "image", prompt: o.image_prompt ?? o.visual ?? "", text: o.headline ?? "", aspect: "4:5" }];
   return [
     { key: "reel", label: "Reel video", kind: "video", prompt: o.video_prompt ?? "", text: "", aspect: "9:16" },
@@ -587,6 +598,86 @@ function OutputView({ format, o }: { format: string; o: any }) {
             <Text>{o.swipe_reason}</Text>
           </Field>
         )}
+        <Caption o={o} />
+      </Panel>
+    );
+  if (format === "founder_video")
+    return (
+      <Panel className="space-y-5">
+        <Field label="Concept">
+          <Text>{o.concept ?? ""}</Text>
+        </Field>
+        {o.doctrine_line && (
+          <Field label="The line people should remember">
+            <Text className="wide text-lg">{o.doctrine_line}</Text>
+          </Field>
+        )}
+        <div className="space-y-2">
+          {(o.scenes ?? []).map((sc: any) => (
+            <div key={sc.n} className="grid grid-cols-[48px_1fr] gap-3 rounded-ctl border border-rule p-3">
+              <span className="wide text-concrete">
+                {sc.n}
+                <span className="block text-xs">{(sc.n - 1) * 10}–{sc.n * 10}s</span>
+              </span>
+              <div className="space-y-1 text-sm">
+                <p className="text-xs uppercase text-concrete">{sc.purpose}</p>
+                <Text className="font-medium">{sc.voiceover ?? ""}</Text>
+                {sc.on_screen_text && (
+                  <p className="text-ultra" dir="auto">
+                    {sc.on_screen_text}
+                  </p>
+                )}
+                <p className="text-concrete" dir="auto">
+                  {sc.visual}
+                </p>
+                <p className="text-xs text-concrete">
+                  Starts: {sc.start_frame} · Ends: {sc.end_frame}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Music">
+            <Text>{o.music ?? ""}</Text>
+          </Field>
+          <Field label="Sound design">
+            <Text>{o.sound_design ?? ""}</Text>
+          </Field>
+        </div>
+        <Caption o={o} />
+      </Panel>
+    );
+  if (format === "motion_carousel")
+    return (
+      <Panel className="space-y-5">
+        <Field label={`Concept · ${o.bpm ?? "?"} BPM`}>
+          <Text>{o.concept ?? ""}</Text>
+        </Field>
+        <Field label="What travels from slide to slide">
+          <Text>{o.through_line ?? ""}</Text>
+        </Field>
+        <div className="space-y-2">
+          {(o.slides ?? []).map((s: any) => (
+            <div key={s.n} className="grid grid-cols-[32px_1fr] gap-3 rounded-ctl border border-rule p-3">
+              <span className="wide text-lg text-concrete">{s.n}</span>
+              <div className="space-y-1 text-sm">
+                <Text className="font-medium">{s.copy ?? ""}</Text>
+                <p className="text-concrete" dir="auto">
+                  Motion: {s.motion}
+                </p>
+                <p className="text-concrete" dir="auto">
+                  Into next: {s.transition_out}
+                </p>
+                {(s.sfx ?? []).length > 0 && <p className="text-xs text-ultra">Sound: {(s.sfx ?? []).join(" · ")}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+        <Field label="Music">
+          <Text>{o.music ?? ""}</Text>
+        </Field>
+        <p className="text-sm text-concrete">Motion slides are rendered by Claude as short videos with sound. Ask Claude in your session to render this carousel, then upload each slide here.</p>
         <Caption o={o} />
       </Panel>
     );
