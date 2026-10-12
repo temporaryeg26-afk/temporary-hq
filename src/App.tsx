@@ -9,6 +9,7 @@ import ResearchHQ from "./pages/ResearchHQ";
 import PeriodPage from "./pages/Period";
 import Studio from "./pages/Studio";
 import PlaybookPage from "./pages/Playbook";
+import RunGuide from "./pages/RunGuide";
 import CommunityPage from "./pages/Community";
 import { FilmPage, MotionPage } from "./pages/Storyboard";
 import PlanPage from "./pages/Plan";
@@ -89,8 +90,9 @@ export const ROOMS: Room[] = [
 export const LIBRARY: Room = {
   key: "library",
   label: "Library",
-  what: "Your files and settings: assets, products, brands.",
+  what: "How the agency runs, your files and settings.",
   pages: [
+    ["/run", "Run guide"],
     ["/assets", "Assets"],
     ["/products", "Products"],
     ["/brands", "Brands"],
@@ -154,7 +156,7 @@ function Shell({ children }: { children: ReactNode }) {
               </select>
             )}
             <a
-              href="#/assets"
+              href="#/run"
               title="Library: assets, products, brands, settings"
               className={`rounded-ctl border px-3 py-1.5 ${room.key === "library" ? "border-concrete text-plaster" : "border-rule text-concrete hover:text-plaster"}`}
             >
@@ -335,6 +337,7 @@ export default function App() {
       case "/week": return <WeekPage />;
       case "/ads": return <AdsPage />;
       case "/playbook": return <PlaybookPage />;
+      case "/run": return <RunGuide />;
       case "/community": return <CommunityPage />;
       case "/orders": return <OrdersPage />;
       case "/session": return <SessionPage />;
