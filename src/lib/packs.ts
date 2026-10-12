@@ -3,7 +3,7 @@
  * Each pack is a complete, self-contained instruction you paste into claude.ai or chatgpt.com.
  * The answer comes back as JSON, which the site checks and saves.
  */
-import type { Brand, ContentItem, Doctrine, Plan, Product, Research, Session } from "./types";
+import type { AdRecord, Brand, ContentItem, Doctrine, Plan, Product, Research, Session } from "./types";
 
 // ------------------------------------------------------------------ helpers
 
@@ -163,7 +163,7 @@ Do not only follow trends: plan at least one piece per week that could START a t
 
 JSON shape:
 {"title":"campaign name","goal":"one measurable goal","strategy":"3-5 sentences","weeks":[{"week":1,"focus":"","notes":""}],"kpis":[""],
-"items":[{"day":1,"format":"reel|carousel|static|story|founder_video|motion_carousel","pillar":"discovery|philosophy|product|community|conversion|doctrine","product_code":"03 or null","audience":"1|2|3|4","direction":"A|B|C","objective":"","angle":"the idea in one line","hook_direction":"","cta":"","needs_real_footage":false}]}${JSON_TAIL}`;
+"items":[{"day":1,"format":"reel|carousel|static|story|founder_video|motion_carousel","pillar":"discovery|philosophy|product|community|conversion|doctrine","product_code":"03 or null","audience":"1|2|3|4","direction":"A|B|C","objective":"","angle":"the idea in one line","hook_direction":"","cta":"","post_time":"HH:MM Cairo time, the best hour for this audience and format","needs_real_footage":false}]}${JSON_TAIL}`;
 }
 
 // ------------------------------------------------------------------ 4. write (worker, ChatGPT)
@@ -336,4 +336,47 @@ OWNER'S RESULTS & NOTES (followers, DMs, orders, what people said): ${notes || "
 
 JSON shape:
 {"wins":[""],"misses":[""],"lessons":[""],"doctrine_check":"are we expressing the doctrine? where not?","bold_bets":["2-4 trend-starting ideas for the next period"],"next_focus":"one sentence","next_goal":"the goal to paste into the plan, measurable"}${JSON_TAIL}`;
+}
+
+// ------------------------------------------------------------------ 10. media buying (manager)
+
+const AD_RULES = `HONEST ADS: never fake testimonials or reviews; an AI or masked character may PRESENT the product but must never pretend to be a real customer who bought it; no fake urgency, fake stock counts or invented discounts; prices only as in the catalogue; follow Meta's rules for AI-generated content (label it where required). Your real logo, artwork and garments are pasted on top of any AI visual.`;
+
+export function adsPack(brand: Brand, products: Product[], items: ContentItem[], budget: number | null, goal: string, days: number, last: AdRecord | null): string {
+  const strong = items
+    .filter((i) => i.status === "published" || i.status === "approved")
+    .slice(-25)
+    .map((i) => `- [${i.id.slice(0, 8)}] ${i.scheduled_for} ${i.format}/${i.pillar}: ${i.title}${i.qa ? ` (score ${i.qa.score})` : ""}`);
+  return `You are the MEDIA BUYER for ${brand.name} on Instagram/Facebook (Meta Ads Manager), in Egypt. Plan paid promotion for the next ${days} days. Be specific and practical for a small premium brand: few campaigns, clear tests, clear rules for when to cut or scale.
+
+${brandHeader(brand)}
+
+${catalogueText(products)}
+
+BUDGET: ${budget ? `EGP ${budget} for the whole period` : "not set — propose a lean budget and say why"}
+GOAL: ${goal || "followers who care, Instagram messages and order-form visits that turn into orders"}
+CONTENT WE CAN BOOST (approved or posted):
+${strong.join("\n") || "none yet — propose the creatives to make"}
+LAST AD REVIEW: ${last?.data?.summary ?? "none"}
+
+${AD_RULES}
+
+Include an AD TEST KIT: 5-10 short ad versions (different hooks and angles, 9:16, 10-20 seconds) the team can make for free in Google Flow, each with exact script and on-screen text.
+
+JSON shape:
+{"strategy":"3-5 sentences","campaigns":[{"name":"","objective":"Awareness|Engagement|Messages|Traffic|Sales","daily_egp":0,"days":0,"audience":"locations (Cairo areas/Egypt), ages, interests, lookalikes/retargeting","placements":"","creative":"which post id or which test","why":""}],"tests":[{"name":"","hook":"first 2 seconds","angle":"","format":"reel|story","product_code":"03 or null","script":"exact words","on_screen_text":"","caption":"","cta":""}],"measure":["what to watch: e.g. cost per message, thumb-stop rate"],"rules":["when to cut, keep or scale"]}${JSON_TAIL}`;
+}
+
+export function adReviewPack(brand: Brand, plan: AdRecord | null, results: string): string {
+  return `You are the MEDIA BUYER for ${brand.name}. Review the ad results below (pasted from Meta Ads Manager) against the plan, and decide for each campaign or ad: cut, keep, scale or fix. Be blunt and specific. Egypt, EGP.
+
+PLAN: ${plan ? JSON.stringify({ strategy: plan.data.strategy, campaigns: plan.data.campaigns, rules: plan.data.rules }).slice(0, 3500) : "no saved plan"}
+
+RESULTS (as pasted by the owner):
+${results}
+
+${AD_RULES}
+
+JSON shape:
+{"summary":"2-4 sentences","verdicts":[{"campaign":"name","action":"cut|keep|scale|fix","why":"","change":"exact change: budget, audience, creative, hook"}],"next_moves":["3-5 concrete steps for this week"]}${JSON_TAIL}`;
 }
