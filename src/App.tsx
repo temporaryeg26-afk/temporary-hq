@@ -12,6 +12,8 @@ import AssetsPage from "./pages/Assets";
 import ProductsPage from "./pages/Products";
 import BrandsPage from "./pages/Brands";
 import SettingsPage from "./pages/Settings";
+import SessionPage from "./pages/Session";
+import DoctrinePage from "./pages/Doctrine";
 
 // ------------------------------------------------------------------ tiny hash router
 
@@ -34,6 +36,8 @@ export const useBrand = () => useContext(BrandCtx)!;
 
 const NAV = [
   ["/", "Overview"],
+  ["/session", "Session"],
+  ["/doctrine", "Doctrine"],
   ["/research", "Trend Radar"],
   ["/plan", "Plan"],
   ["/content", "Content"],
@@ -259,6 +263,8 @@ export default function App() {
 
   const page = (() => {
     switch (path) {
+      case "/session": return <SessionPage />;
+      case "/doctrine": return <DoctrinePage />;
       case "/research": return <ResearchPage />;
       case "/plan": return <PlanPage />;
       case "/content": return <ContentPage />;
