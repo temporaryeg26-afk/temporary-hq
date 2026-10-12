@@ -495,9 +495,9 @@ JSON shape:
 
 // ------------------------------------------------------------------ ROADMAP (Director + Strategist)
 
-export function roadmapPack(brand: Brand, products: Product[], lab: Research | null, period: Period, last: Period | null): string {
+export function roadmapPack(brand: Brand, products: Product[], lab: Research | null, period: Period, last: Period | null, detailDays = 14): string {
   const days = Math.round((new Date(period.end).getTime() - new Date(period.start).getTime()) / 86400000);
-  const detailEnd = new Date(new Date(period.start).getTime() + Math.min(days, 14) * 86400000).toISOString().slice(0, 10);
+  const detailEnd = new Date(new Date(period.start).getTime() + Math.min(days, detailDays) * 86400000).toISOString().slice(0, 10);
   return `${skillsSheet("director")}
 ${skillsSheet("strategist")}
 
@@ -520,7 +520,7 @@ ${TEAM.map((e) => `- ${e.id}: ${e.name} — ${e.job} (${e.runsOn})`).join("\n")}
 
 RULES:
 - Split the whole period into phases (e.g. awareness → trust → launch → growth); each phase has a measurable goal.
-- Only the first ${Math.min(days, 14)} days (until ${detailEnd}) get detailed tasks. Later phases stay at roadmap level — they are produced at the next review.
+- Only the first ${Math.min(days, detailDays)} days (until ${detailEnd}) get detailed tasks. Later phases stay at roadmap level — they are produced at the next review.
 - Every task is ONE clear deliverable for ONE employee, with the input they need and a due date (YYYY-MM-DD).
 - Week 1 is organic only. Paid ads only after organic proves a post.
 - Build trust before selling. No competitor names. No claim we can't prove. AI video is disclosed.

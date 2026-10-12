@@ -9,6 +9,10 @@ export type BrandSettings = {
   autoApprove?: Partial<Record<Pillar, boolean>>;
   /** Search queries the Researcher uses (editable on the Research page). */
   research_queries?: string[];
+  /** Default length of a new period in days (2 weeks = 14). */
+  period_days?: number;
+  /** How many days ahead the team produces in full detail (7 or 14). */
+  detail_days?: number;
 };
 
 export type Brand = {
