@@ -96,6 +96,8 @@ export type ContentItem = {
   revision_note: string | null;
   status: "brief" | "drafted" | "in_review" | "needs_you" | "approved" | "rejected" | "published";
   revisions: number;
+  /** Earlier outputs, newest first — restorable from the Studio preview. */
+  versions?: { at: string; by: string; output: Record<string, any> }[];
   created_at: string;
   updated_at: string;
 };
