@@ -5,6 +5,7 @@ import { loadContent, log } from "../lib/data";
 import { currentLogin, downloadFile } from "../lib/github";
 import { list, mutate, now } from "../lib/store";
 import type { ContentItem, Media } from "../lib/types";
+import { renderPiece, RENDERABLE } from "../lib/render";
 
 /** Default Cairo posting times when the plan didn't set one. */
 const DEFAULT_TIME: Record<string, string> = { reel: "20:00", founder_video: "20:30", carousel: "13:00", motion_carousel: "14:00", static: "18:00", story: "21:00" };
@@ -36,8 +37,11 @@ export default function Studio({ view }: { view: View }) {
   const mediaOf = (id: string) => data.media.filter((m) => m.content_id === id).sort((a, b) => slotNo(a.slot) - slotNo(b.slot));
   const item = data.items.find((i) => i.id === open) ?? null;
 
+  const needDesign = data.items.filter((i) => RENDERABLE.includes(i.format) && i.output && i.status !== "published" && mediaOf(i.id).length === 0);
+
   return (
     <div>
+      {needDesign.length > 0 && <DesignBar items={needDesign} onDone={reload} />}
       {view === "calendar" && <Calendar items={data.items} onOpen={setOpen} />}
       {view === "grid" && <Grid items={data.items} mediaOf={mediaOf} onOpen={setOpen} />}
       {view === "approve" && <Approvals items={data.items} mediaOf={mediaOf} onChange={reload} />}
@@ -542,6 +546,26 @@ function Editor({ item, onChange }: { item: ContentItem; onChange: () => void })
           Open full piece (script, slides, visuals)
         </a>
       </div>
+      {RENDERABLE.includes(item.format) && item.output && (
+        <Button
+          busy={busy}
+          onClick={async () => {
+            setBusy(true);
+            setErr(null);
+            setMsg(null);
+            try {
+              const n = await renderPiece(brand.id, item, (s) => setMsg(s));
+              setMsg(`Made ${n} design${n === 1 ? "" : "s"}.`);
+              onChange();
+            } catch (e) {
+              setErr((e as Error).message);
+            }
+            setBusy(false);
+          }}
+        >
+          Re-make the design
+        </Button>
+      )}
       {msg && <p className="text-moss">{msg}</p>}
       <ErrorNote msg={err} />
       {versions.length > 0 && (
@@ -566,6 +590,44 @@ function Editor({ item, onChange }: { item: ContentItem; onChange: () => void })
           </ul>
         </details>
       )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ design renderer (typographic posts, carousels, stories, motion slides)
+
+function DesignBar({ items, onDone }: { items: ContentItem[]; onDone: () => void }) {
+  const { brand } = useBrand();
+  const [busy, setBusy] = useState(false);
+  const [step, setStep] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const run = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      for (const [n, it] of items.entries()) {
+        await renderPiece(brand.id, it, (s) => setStep(`${n + 1}/${items.length} · ${it.title.slice(0, 40)} — ${s}`));
+      }
+      await log(brand.id, `${currentLogin()} made designs for ${items.length} pieces with the HQ renderer.`);
+      setStep(null);
+      onDone();
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+    setBusy(false);
+  };
+  return (
+    <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-panel border border-ultra/40 bg-soot p-4 text-sm">
+      <div>
+        <p>
+          <b>{items.length}</b> written {items.length === 1 ? "piece needs" : "pieces need"} designs (posts, carousels, story frames, motion slides).
+        </p>
+        <p className="text-xs text-concrete">{step ?? "HQ designs them with exact Arabic type and pastes your real logo. Motion slides record in real time — keep this tab in front."}</p>
+        <ErrorNote msg={err} />
+      </div>
+      <Button kind="primary" onClick={run} busy={busy}>
+        Make designs
+      </Button>
     </div>
   );
 }
