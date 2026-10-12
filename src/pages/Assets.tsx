@@ -5,9 +5,9 @@ import { loadAssets } from "../lib/assets";
 import { log } from "../lib/data";
 import { bitmap, restoreProtected, sha256 } from "../lib/media";
 import { photoEditPrompt } from "../lib/packs";
-import { currentLogin, downloadFile, fileUrl, removeFiles, uploadFile } from "../lib/github";
+import { currentLogin, downloadFile, fileUrl, listRepoFolder, removeFiles, RepoFile, uploadFile } from "../lib/github";
 import { insert, list, newId, now, remove, update } from "../lib/store";
-import type { Asset, Media, Region } from "../lib/types";
+import type { Asset, Media, Product, Region } from "../lib/types";
 
 const KINDS: [Asset["kind"], string, string][] = [
   ["logo", "Logo", "Your brand mark, placed on images and videos exactly as uploaded. A transparent PNG works best."],
@@ -127,6 +127,8 @@ export default function AssetsPage() {
         </div>
         <p className="mt-3 text-sm text-concrete">{KINDS.find((k) => k[0] === kind)?.[2]}</p>
       </Panel>
+
+      <ImportFromRepo existing={data?.assets ?? []} onDone={reload} />
 
       {KINDS.map(([k, label]) => {
         const list = (data?.assets ?? []).filter((a) => a.kind === k);
@@ -383,5 +385,170 @@ function EditPhoto({ asset, onClose }: { asset: Asset; onClose: () => void }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// ------------------------------------------------------------------ import product photos linked from another repo
+
+const norm = (w: string) => (w === "tee" || w === "t" || w === "shirt" || w === "tshirt" ? "tshirt" : w);
+const words = (s: string) => s.toLowerCase().replace(/t-shirt/g, "tshirt").split(/[^a-z0-9]+/).filter(Boolean).map(norm);
+
+/** Pick the product whose name best matches a file name (rare words like "boulevard" count more than "oversized"). */
+export function guessProduct(file: string, products: Product[]): string {
+  const names = products.map((p) => new Set(words(p.name)));
+  const df = new Map<string, number>();
+  names.forEach((set) => set.forEach((w) => df.set(w, (df.get(w) ?? 0) + 1)));
+  const fw = new Set(words(file.replace(/\.[^.]+$/, "")));
+  let best = "";
+  let bestScore = 0.15;
+  products.forEach((p, i) => {
+    let score = 0;
+    names[i].forEach((w) => {
+      const weight = 1 / (df.get(w) ?? 1);
+      score += fw.has(w) ? weight : -0.3 * weight;
+    });
+    if (score > bestScore) {
+      bestScore = score;
+      best = p.id;
+    }
+  });
+  return best;
+}
+
+type Row = { file: RepoFile; product_id: string; pick: boolean; already: boolean };
+
+function ImportFromRepo({ existing, onDone }: { existing: Asset[]; onDone: () => void }) {
+  const { brand, products } = useBrand();
+  const [open, setOpen] = useState(false);
+  const [repo, setRepo] = useState("temporaryeg26-afk/order");
+  const [folder, setFolder] = useState("mockups");
+  const [rows, setRows] = useState<Row[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const find = async () => {
+    setBusy(true);
+    setErr(null);
+    setMsg(null);
+    try {
+      const have = new Set(existing.filter((a) => a.kind === "product_photo").map((a) => a.label.toLowerCase()));
+      const files = (await listRepoFolder(repo, folder)).filter((f) => /\.(png|jpe?g|webp)$/i.test(f.name));
+      setRows(
+        files.map((f) => {
+          const already = have.has(f.name.replace(/\.[^.]+$/, "").toLowerCase());
+          return { file: f, product_id: guessProduct(f.name, products), pick: !already, already };
+        })
+      );
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+    setBusy(false);
+  };
+
+  const doImport = async () => {
+    if (!rows) return;
+    const chosen = rows.filter((r) => r.pick);
+    if (chosen.some((r) => !r.product_id)) {
+      setErr("Choose a product for every ticked file first.");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    try {
+      const out: Asset[] = [];
+      for (const [n, r] of chosen.entries()) {
+        setProgress(`Checking ${n + 1} of ${chosen.length}: ${r.file.name}`);
+        const blob = await downloadFile(r.file.download_url);
+        const bm = await bitmap(blob);
+        out.push({
+          id: newId(),
+          kind: "product_photo",
+          locked: true,
+          label: r.file.name.replace(/\.[^.]+$/, ""),
+          product_id: r.product_id,
+          storage_path: r.file.download_url,
+          mime: blob.type || "image/png",
+          width: bm.width,
+          height: bm.height,
+          sha256: await sha256(blob),
+          protect_regions: [],
+          created_by: currentLogin(),
+          created_at: now(),
+        });
+      }
+      setProgress("Saving…");
+      await insert<Asset>(brand.id, "assets", out, `link ${out.length} product photos from ${repo}/${folder}`);
+      await log(brand.id, `Linked ${out.length} product photos from ${repo}/${folder}.`);
+      setMsg(`Imported ${out.length} product photos. They stay in ${repo} — don't rename or delete them there.`);
+      setRows(null);
+      onDone();
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+    setProgress(null);
+    setBusy(false);
+  };
+
+  if (!open)
+    return (
+      <p className="-mt-3 mb-6 text-sm">
+        <button className="text-ultra hover:underline" onClick={() => setOpen(true)}>
+          Import product photos from another GitHub repo (no uploading)
+        </button>
+      </p>
+    );
+
+  const picked = rows?.filter((r) => r.pick).length ?? 0;
+  return (
+    <Panel className="mb-6">
+      <h3 className="wide font-semibold">Import from your shop repo</h3>
+      <p className="mt-1 text-sm text-concrete">Links images that are already on GitHub (e.g. your shop's mockups) as locked product photos. Nothing is uploaded, so it's instant. Keep the files where they are.</p>
+      <div className="mt-4 grid gap-3 md:grid-cols-[1fr_200px_auto] md:items-end">
+        <div>
+          <label htmlFor="irepo">Repo</label>
+          <input id="irepo" value={repo} onChange={(e) => setRepo(e.target.value)} />
+        </div>
+        <div>
+          <label htmlFor="ifolder">Folder</label>
+          <input id="ifolder" value={folder} onChange={(e) => setFolder(e.target.value)} />
+        </div>
+        <Button onClick={find} busy={busy && !rows}>
+          Find images
+        </Button>
+      </div>
+      <ErrorNote msg={err} />
+      {msg && <p className="mt-3 text-sm text-moss">{msg}</p>}
+      {rows && (
+        <>
+          <ul className="mt-4 divide-y divide-rule rounded-ctl border border-rule">
+            {rows.map((r, i) => (
+              <li key={r.file.path} className="grid grid-cols-[24px_1fr] items-center gap-3 px-3 py-2 text-sm md:grid-cols-[24px_1fr_280px]">
+                <input type="checkbox" className="h-4 w-4" checked={r.pick} onChange={(e) => setRows(rows.map((x, n) => (n === i ? { ...x, pick: e.target.checked } : x)))} />
+                <span className="truncate">
+                  {r.file.name}
+                  {r.already && <span className="ml-2 text-xs text-concrete">(already in Assets)</span>}
+                </span>
+                <select className="col-span-2 md:col-span-1" value={r.product_id} onChange={(e) => setRows(rows.map((x, n) => (n === i ? { ...x, product_id: e.target.value } : x)))}>
+                  <option value="">Which product?</option>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.code} {p.name}
+                    </option>
+                  ))}
+                </select>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Button kind="primary" onClick={doImport} busy={busy} disabled={!picked}>
+              Import {picked} {picked === 1 ? "photo" : "photos"}
+            </Button>
+            {progress && <span className="text-sm text-concrete">{progress}</span>}
+          </div>
+        </>
+      )}
+    </Panel>
   );
 }
