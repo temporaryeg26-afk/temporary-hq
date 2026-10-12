@@ -133,3 +133,27 @@ export type Session = {
   made_by: string;
   created_at: string;
 };
+
+export type AdCampaign = { name: string; objective: string; daily_egp: number; days: number; audience: string; placements: string; creative: string; why: string };
+export type AdTest = { name: string; hook: string; angle: string; format: string; product_code: string | null; script: string; on_screen_text: string; caption: string; cta: string };
+export type AdVerdict = { campaign: string; action: "cut" | "keep" | "scale" | "fix"; why: string; change: string };
+
+export type AdRecord = {
+  id: string;
+  kind: "plan" | "review";
+  budget_egp: number | null;
+  goal: string;
+  data: {
+    strategy?: string;
+    campaigns?: AdCampaign[];
+    tests?: AdTest[];
+    measure?: string[];
+    rules?: string[];
+    verdicts?: AdVerdict[];
+    summary?: string;
+    next_moves?: string[];
+  };
+  results_text?: string;
+  made_by: string;
+  created_at: string;
+};
