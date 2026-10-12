@@ -95,7 +95,7 @@ export function drawFrame(ctx: CanvasRenderingContext2D, W: number, H: number, f
   // kicker + counter
   const k = ease(t * 2);
   ctx.globalAlpha = k;
-  ctx.font = `500 ${Math.round(W * 0.03)}px ${FONT_AR}`;
+  ctx.font = `700 ${Math.round(W * 0.034)}px ${FONT_AR}`;
   ctx.fillStyle = th.accent;
   if (f.kicker) ctx.fillText(f.kicker, xText, pad + W * 0.03);
   if (f.total && f.total > 1) {
@@ -127,13 +127,6 @@ export function drawFrame(ctx: CanvasRenderingContext2D, W: number, H: number, f
   const ry = y0 + blockH + fit.size * 0.1;
   ctx.fillRect(ar ? W - pad - ruleW : pad, Math.min(ry, H * 0.86), ruleW, Math.max(4, W * 0.006));
 
-  // campaign footer (the logo itself is pasted later from the original file)
-  ctx.globalAlpha = 0.8;
-  ctx.fillStyle = th.muted;
-  ctx.font = `500 ${Math.round(W * 0.026)}px ${FONT_AR}`;
-  ctx.direction = "rtl";
-  ctx.textAlign = "right";
-  ctx.fillText("اعرف قبل ما تدفع", W - pad, H - pad * (tall ? 1.6 : 0.9));
   ctx.restore();
 }
 
