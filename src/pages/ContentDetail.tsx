@@ -94,8 +94,18 @@ export default function ContentDetail({ id }: { id: string }) {
           <h1 className="wide mt-1 text-2xl font-semibold" dir="auto">
             {item.title}
           </h1>
-          <div className="mt-2">
+          <div className="mt-2 flex items-center gap-3">
             <Status s={item.status} />
+            {item.format === "founder_video" && item.output && (
+              <a href={`#/film/${item.id}`} className="text-sm text-ultra hover:underline">
+                Open storyboard
+              </a>
+            )}
+            {item.format === "motion_carousel" && item.output && (
+              <a href={`#/motion/${item.id}`} className="text-sm text-ultra hover:underline">
+                Open motion board
+              </a>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">

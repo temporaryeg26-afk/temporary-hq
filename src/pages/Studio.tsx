@@ -528,6 +528,16 @@ function Editor({ item, onChange }: { item: ContentItem; onChange: () => void })
         >
           Save changes
         </Button>
+        {item.format === "founder_video" && item.output && (
+          <a href={`#/film/${item.id}`} className="text-ultra hover:underline">
+            Open storyboard
+          </a>
+        )}
+        {item.format === "motion_carousel" && item.output && (
+          <a href={`#/motion/${item.id}`} className="text-ultra hover:underline">
+            Open motion board
+          </a>
+        )}
         <a href={`#/content/${item.id}`} className="text-ultra hover:underline">
           Open full piece (script, slides, visuals)
         </a>
