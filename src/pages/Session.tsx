@@ -46,8 +46,8 @@ export default function SessionPage() {
   return (
     <div>
       <PageHead
-        title="Session"
-        sub="Every 1–2 weeks: review what happened, sharpen the doctrine, research, plan the next period and produce it. Follow the steps in order."
+        title="Reports"
+        sub="What this is: every 1–2 weeks, paste your numbers. The Growth & data employee and the Director say what worked, what to cut and the next goal."
       />
       <ErrorNote msg={error} />
 

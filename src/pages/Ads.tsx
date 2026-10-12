@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useBrand } from "../App";
 import Relay from "../components/Relay";
 import { aiName, Button, Copy, ErrorNote, PageHead, Panel, useAsync } from "../components/ui";
-import { applyAdPlan, applyAdReview, createPiece, loadAds, loadContent } from "../lib/data";
+import { activePeriod, applyAdPlan, applyAdReview, createPiece, loadAds, loadContent } from "../lib/data";
+import { PAID_UNLOCK_DAYS } from "../lib/playbooks";
 import { adReviewPack, adsPack } from "../lib/packs";
 import type { AdRecord, AdTest } from "../lib/types";
 
@@ -22,8 +23,8 @@ export default function AdsPage() {
   const [results, setResults] = useState("");
 
   const { data, error, reload } = useAsync(async () => {
-    const [ads, items] = await Promise.all([loadAds(brand.id), loadContent(brand.id)]);
-    return { ads, items };
+    const [ads, items, period] = await Promise.all([loadAds(brand.id), loadContent(brand.id), activePeriod(brand.id)]);
+    return { ads, items, period };
   }, [brand.id]);
 
   const plan: AdRecord | null = data?.ads.find((a) => a.kind === "plan") ?? null;
@@ -35,6 +36,19 @@ export default function AdsPage() {
     <div>
       <PageHead title="Media buying" sub="Paid promotion on Instagram and Facebook: what to boost, budget, audiences, test ads, and a weekly results review. You press Launch in Meta Ads Manager — HQ never spends money by itself." />
       <ErrorNote msg={error} />
+      {(() => {
+        const st = data?.period?.start;
+        const day = st ? Math.floor((Date.now() - new Date(st + "T00:00:00").getTime()) / 86400000) + 1 : 0;
+        return !st || day <= PAID_UNLOCK_DAYS ? (
+          <p className="mb-5 rounded-panel border border-ochre/50 bg-soot p-4 text-sm text-ochre">
+            Organic first: paid ads stay off until day {PAID_UNLOCK_DAYS + 1} of the period{st ? ` (today is day ${day})` : ""}. You can plan now; follow the steps in{" "}
+            <a href="#/playbook" className="underline">
+              Playbooks
+            </a>
+            .
+          </p>
+        ) : null;
+      })()}
 
       <Panel className="mb-5">
         <div className="grid gap-4 md:grid-cols-[160px_1fr_130px]">
