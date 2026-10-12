@@ -145,7 +145,7 @@ export function FilmPage({ id }: { id: string }) {
           <p className="text-concrete" dir="auto">
             Music: {o.music} {o.sound_design ? `· ${o.sound_design}` : ""}
           </p>
-          <p className="text-xs text-concrete">AI-made film — say so in the caption (e.g. “made with AI · real brand, real founder”).</p>
+          <p className="text-xs text-concrete">The founder is an AI-made character — say so in every caption (e.g. “founder character made with AI · real brand, real products”). Never present him as a real person on camera.</p>
         </div>
         <div className="flex flex-wrap items-start gap-2">
           <Button onClick={() => setScript(!script)}>{script ? "Back to storyboard" : "Read full script"}</Button>

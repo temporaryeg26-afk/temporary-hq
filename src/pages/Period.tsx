@@ -3,7 +3,7 @@ import { go, useBrand } from "../App";
 import Relay from "../components/Relay";
 import { aiName, Button, ErrorNote, Loading, useAsync } from "../components/ui";
 import { TEAM } from "../lib/agency";
-import { applyRoadmap, createPeriod, latestLab, loadPeriods, loadTasks, updateTask } from "../lib/data";
+import { applyRoadmap, createPeriod, latestLab, loadPeriods, loadTasks, movePeriod, updateTask } from "../lib/data";
 import { roadmapPack } from "../lib/packs";
 import type { Period, Task, TaskStatus } from "../lib/types";
 
@@ -69,7 +69,10 @@ export default function PeriodPage({ isNew }: { isNew?: boolean }) {
             {p.goal}
           </p>
         </div>
-        <Button onClick={() => { go("/period/new"); }}>New period</Button>
+        <div className="flex gap-2">
+          <EditPeriod p={p} onDone={reload} />
+          <Button onClick={() => { go("/period/new"); }}>New period</Button>
+        </div>
       </header>
 
       {p.needs.length > 0 && (
@@ -388,3 +391,73 @@ function TaskDetail({ t, onChange }: { t: Task; onChange: () => void }) {
   );
 }
 
+
+function EditPeriod({ p, onDone }: { p: Period; onDone: () => void }) {
+  const { brand } = useBrand();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(p.name);
+  const [goal, setGoal] = useState(p.goal);
+  const [start, setStart] = useState(p.start);
+  const [end, setEnd] = useState(p.end);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  if (!open) return <Button onClick={() => setOpen(true)}>Edit period</Button>;
+  return (
+    <div className="fixed inset-0 z-40 grid place-items-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-label="Edit period">
+      <div className="w-full max-w-lg space-y-3 rounded-panel border border-rule bg-ash p-5">
+        <h2 className="wide text-lg font-semibold">Edit period</h2>
+        <div>
+          <label htmlFor="ep-n">Name</label>
+          <input id="ep-n" dir="auto" value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="ep-s">Start</label>
+            <input
+              id="ep-s"
+              type="date"
+              value={start}
+              onChange={(e) => {
+                setEnd(addDays(e.target.value, span(start, end)));
+                setStart(e.target.value);
+              }}
+            />
+          </div>
+          <div>
+            <label htmlFor="ep-e">End</label>
+            <input id="ep-e" type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
+          </div>
+        </div>
+        <p className="text-xs text-concrete">Changing the start moves the roadmap phases and every open task by the same number of days.</p>
+        <div>
+          <label htmlFor="ep-g">Goal</label>
+          <textarea id="ep-g" dir="auto" rows={3} value={goal} onChange={(e) => setGoal(e.target.value)} />
+        </div>
+        <ErrorNote msg={err} />
+        <div className="flex gap-2">
+          <Button
+            kind="primary"
+            busy={busy}
+            onClick={async () => {
+              setBusy(true);
+              setErr(null);
+              try {
+                await movePeriod(brand, p, { name: name.trim(), goal: goal.trim(), start, end });
+                setOpen(false);
+                onDone();
+              } catch (e) {
+                setErr((e as Error).message);
+              }
+              setBusy(false);
+            }}
+          >
+            Save
+          </Button>
+          <Button kind="quiet" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
