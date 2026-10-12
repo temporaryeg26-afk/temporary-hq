@@ -567,3 +567,28 @@ RULES: ${kind === "scene" ? "exactly 10 seconds, max ~25 spoken words, one idea;
 
 JSON shape: {"part": { ...same fields as the current ${kind}, with "n": ${n} }}${JSON_TAIL}`;
 }
+
+// ------------------------------------------------------------------ COMMUNITY & SALES (ChatGPT drafts, the owner sends)
+
+export function communityPack(brand: Brand, products: Product[], lab: Research | null, messages: string): string {
+  return `${skillsSheet("community")}
+
+BRAND:
+${brandHeader(brand)}
+
+${catalogueText(products)}
+
+${researchDigest(lab, 1200)}
+
+MESSAGES / COMMENTS TO ANSWER (names, phone numbers and addresses already removed):
+${messages}
+
+RULES:
+- Egyptian Arabic, warm, short, like a person — match the language the person wrote in.
+- Only facts from the catalogue and brand info above. If a fact is missing (price not confirmed, sizes, delivery), say we'll confirm and flag it in "needs_owner".
+- Never promise discounts, dates or stock we haven't confirmed. Never ask for more personal data than needed.
+- A complaint: thank them, own it, offer a concrete fix — never argue in public.
+- If someone wants to buy: give the next step (order link in bio / the form), nothing pushy.
+
+JSON shape: {"replies":[{"message":"short quote of what they said","intent":"question|complaint|wants_to_buy|compliment|other","reply":"the exact reply to send","where":"DM|comment","needs_owner":""}]}${JSON_TAIL}`;
+}
