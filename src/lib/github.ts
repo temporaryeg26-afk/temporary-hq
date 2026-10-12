@@ -134,6 +134,14 @@ const blobCache = new Map<string, Blob>();
 export async function downloadFile(path: string): Promise<Blob> {
   const hit = blobCache.get(path);
   if (hit) return hit;
+  if (/^https:\/\//.test(path)) {
+    // A file linked from another repo (e.g. your shop's mockups), not copied into the data repo.
+    const r = await fetch(path, { cache: "no-store" });
+    if (!r.ok) throw new Error(`Couldn't download the linked file (error ${r.status}). Was it renamed or deleted in the other repo?`);
+    const lb = await r.blob();
+    blobCache.set(path, lb);
+    return lb;
+  }
   const b = new Blob([await raw(path)]);
   blobCache.set(path, b);
   return b;
@@ -156,7 +164,7 @@ export async function fileUrl(path: string | null | undefined): Promise<string |
 
 export async function removeFiles(paths: string[]) {
   const s = getSession()!;
-  for (const p of paths.filter(Boolean)) {
+  for (const p of paths.filter((x) => x && !/^https:\/\//.test(x))) {
     const m = await meta(p).catch(() => null);
     if (!m) continue;
     await gh(`/repos/${s.repo}/contents/${enc(p)}`, { method: "DELETE", body: JSON.stringify({ message: "HQ: remove file", sha: m.sha }) });
@@ -214,4 +222,16 @@ export async function collaborators(): Promise<{ login: string; role: string }[]
 export function repoUrl() {
   const s = getSession();
   return s ? `https://github.com/${s.repo}` : "";
+}
+
+export type RepoFile = { name: string; path: string; size: number; download_url: string };
+
+/** List the files in a folder of any repo your key can read (e.g. your shop repo's mockups). */
+export async function listRepoFolder(repo: string, folder: string): Promise<RepoFile[]> {
+  const r = await gh(`/repos/${repo.trim()}/contents/${enc(folder.trim().replace(/^\/+|\/+$/g, ""))}`);
+  if (r.status === 404) throw new Error(`Couldn't find ${repo}/${folder}. Check the repo and folder names.`);
+  if (!r.ok) throw new Error(`Couldn't read ${repo}/${folder} (error ${r.status}).`);
+  const body = await r.json();
+  if (!Array.isArray(body)) throw new Error("That is a file, not a folder.");
+  return body.filter((f: any) => f.type === "file").map((f: any) => ({ name: f.name, path: f.path, size: f.size, download_url: f.download_url }));
 }
