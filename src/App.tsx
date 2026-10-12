@@ -5,6 +5,7 @@ import type { Brand, Product } from "./lib/types";
 import { Button, ErrorNote } from "./components/ui";
 import Home from "./pages/Home";
 import ResearchPage from "./pages/Research";
+import ResearchHQ from "./pages/ResearchHQ";
 import PlanPage from "./pages/Plan";
 import ContentPage from "./pages/Content";
 import ContentDetail from "./pages/ContentDetail";
@@ -56,10 +57,11 @@ export const ROOMS: Room[] = [
   {
     key: "strategy",
     label: "Strategy",
-    what: "What we know and what we stand for: research and the brand book.",
+    what: "What we know and what we stand for: research, the brand book and trends.",
     pages: [
       ["/research", "Research"],
       ["/doctrine", "Brand book"],
+      ["/trends", "Trend radar"],
     ],
   },
   {
@@ -320,7 +322,8 @@ export default function App() {
       case "/orders": return <OrdersPage />;
       case "/session": return <SessionPage />;
       case "/doctrine": return <DoctrinePage />;
-      case "/research": return <ResearchPage />;
+      case "/research": return <ResearchHQ />;
+      case "/trends": return <ResearchPage />;
       case "/plan": return <PlanPage />;
       case "/content": return <ContentPage />;
       case "/content/:id": return <ContentDetail id={id} />;
