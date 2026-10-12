@@ -134,6 +134,8 @@ function NewPiece({ onDone }: { onDone: () => void }) {
             <option value="carousel">Carousel</option>
             <option value="static">Static post</option>
             <option value="story">Story set</option>
+            <option value="founder_video">Founder film (6 × 10s)</option>
+            <option value="motion_carousel">Motion carousel</option>
           </select>
         </div>
         <div>
@@ -144,6 +146,7 @@ function NewPiece({ onDone }: { onDone: () => void }) {
             <option value="product">Product desire & proof</option>
             <option value="community">Community & collectibility</option>
             <option value="conversion">Conversion & confidence</option>
+            <option value="doctrine">Doctrine — teach the worldview</option>
           </select>
         </div>
         <div>
