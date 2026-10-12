@@ -3,8 +3,8 @@
  * Each pack is a complete, self-contained instruction you paste into claude.ai or chatgpt.com.
  * The answer comes back as JSON, which the site checks and saves.
  */
-import type { AdRecord, Brand, ContentItem, Doctrine, Plan, Product, Research, ResearchReport, ResearchType, Session } from "./types";
-import { skillsSheet } from "./agency";
+import type { AdRecord, Brand, ContentItem, Doctrine, Period, Plan, Product, Research, ResearchReport, ResearchType, Session } from "./types";
+import { DIRECTOR_CHECKLIST, skillsSheet, TEAM } from "./agency";
 
 // ------------------------------------------------------------------ helpers
 
@@ -491,4 +491,46 @@ JSON shape:
 "checklist":[{"check":"fabric weight (GSM)","how_to_check":"what a buyer should ask or look at","why":""}],
 "trends":[{"trend":"","note":""}],"seasons":[{"when":"date","moment":"","idea":""}],
 "ig_rules":["Instagram rules that matter now"],"risks":[""],"sources":[{"title":"","url":""}]}${JSON_TAIL}`;
+}
+
+// ------------------------------------------------------------------ ROADMAP (Director + Strategist)
+
+export function roadmapPack(brand: Brand, products: Product[], lab: Research | null, period: Period, last: Period | null): string {
+  const days = Math.round((new Date(period.end).getTime() - new Date(period.start).getTime()) / 86400000);
+  const detailEnd = new Date(new Date(period.start).getTime() + Math.min(days, 14) * 86400000).toISOString().slice(0, 10);
+  return `${skillsSheet("director")}
+${skillsSheet("strategist")}
+
+You run the agency together. Build the ROADMAP for this period and split the work between the team.
+
+BRAND:
+${brandHeader(brand)}
+
+${catalogueText(products)}
+
+${researchDigest(lab, 2500)}
+
+PERIOD: "${period.name}" — ${period.start} → ${period.end} (${days} days).
+GOAL: ${period.goal}
+OWNER'S NOTES: ${period.notes || "(none)"}
+LAST PERIOD: ${last ? `${last.name} (${last.start} → ${last.end}), goal: ${last.goal}` : "none — this is the first."}
+
+THE TEAM (use these ids for "employee"):
+${TEAM.map((e) => `- ${e.id}: ${e.name} — ${e.job} (${e.runsOn})`).join("\n")}
+
+RULES:
+- Split the whole period into phases (e.g. awareness → trust → launch → growth); each phase has a measurable goal.
+- Only the first ${Math.min(days, 14)} days (until ${detailEnd}) get detailed tasks. Later phases stay at roadmap level — they are produced at the next review.
+- Every task is ONE clear deliverable for ONE employee, with the input they need and a due date (YYYY-MM-DD).
+- Week 1 is organic only. Paid ads only after organic proves a post.
+- Build trust before selling. No competitor names. No claim we can't prove. AI video is disclosed.
+- "needs_from_owner": every fact, file, footage or approval you need from the owner (e.g. fabric weight, print method, prices, founder story).
+- "budget": how many Google Flow clips (10 s each) and ChatGPT images the detailed part needs, so the owner stays within his plan limits.
+- The Director reviews everything with this checklist: ${DIRECTOR_CHECKLIST.join(" · ")}
+
+JSON shape:
+{"phases":[{"name":"","start":"YYYY-MM-DD","end":"YYYY-MM-DD","goal":"measurable","focus":"what we say and make in this phase"}],
+"tasks":[{"employee":"copywriter","title":"","input":"what they need / the brief","due":"YYYY-MM-DD"}],
+"needs_from_owner":[""],
+"budget":{"flow_clips":0,"chatgpt_images":0,"notes":""}}${JSON_TAIL}`;
 }

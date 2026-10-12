@@ -1,7 +1,7 @@
 import { currentLogin, mutateJSON, readJSON } from "./github";
 import { autofix, checkRules } from "./rules";
 import { insert, list, mutate, newId, now } from "./store";
-import type { Activity, AdRecord, Brand, ContentItem, Doctrine, Plan, Product, Research, ResearchReport, ResearchType, Session } from "./types";
+import type { Activity, AdRecord, Brand, ContentItem, Doctrine, Plan, Product, Period, Research, ResearchReport, ResearchType, Session, Task, TaskStatus } from "./types";
 
 const FORMATS = ["reel", "carousel", "static", "story", "founder_video", "motion_carousel"];
 const PILLARS = ["discovery", "philosophy", "product", "community", "conversion", "doctrine"];
@@ -339,4 +339,74 @@ export async function applyAdReview(brand: Brand, json: any, by: string, results
   await insert(brand.id, "ads", r, "ad review");
   await log(brand.id, `${who(by)} reviewed the ad results: ${r.data.summary}`);
   return r;
+}
+
+// ------------------------------------------------------------------ periods, roadmap, tasks
+
+export async function loadPeriods(brandId: string): Promise<Period[]> {
+  return (await list<Period>(brandId, "periods")).sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export async function activePeriod(brandId: string): Promise<Period | null> {
+  return (await loadPeriods(brandId)).find((p) => p.status === "active") ?? null;
+}
+
+export async function loadTasks(brandId: string, periodId?: string): Promise<Task[]> {
+  const all = await list<Task>(brandId, "tasks");
+  return periodId ? all.filter((t) => t.period_id === periodId) : all;
+}
+
+/** Start a new period of ANY length. The previous active period is marked done (never deleted). */
+export async function createPeriod(brand: Brand, p: { name: string; start: string; end: string; goal: string; notes: string }) {
+  if (!p.name.trim() || !p.goal.trim()) throw new Error("Give the period a name and a goal.");
+  if (p.end <= p.start) throw new Error("The end date must be after the start date.");
+  const row: Period = { id: newId(), ...p, phases: [], needs: [], budget: null, status: "active", made_by: currentLogin(), created_at: now() };
+  await mutate<Period>(brand.id, "periods", (d) => [row, ...d.map((x) => (x.status === "active" ? { ...x, status: "done" as const } : x))], `new period: ${p.name}`);
+  await log(brand.id, `New period "${p.name}" (${p.start} → ${p.end}).`);
+  return row;
+}
+
+export async function updatePeriod(brand: Brand, id: string, patch: Partial<Period>) {
+  await mutate<Period>(brand.id, "periods", (d) => d.map((x) => (x.id === id ? { ...x, ...patch } : x)), "update period");
+}
+
+const EMPLOYEES = ["director", "researcher", "strategist", "copywriter", "film", "motion", "designer", "community", "growth"];
+
+/** Save the Director's roadmap: phases, the owner's to-do list, plan usage and the team's tasks. */
+export async function applyRoadmap(brand: Brand, period: Period, json: any, by: string) {
+  const arr = (v: any) => (Array.isArray(v) ? v : []);
+  const str = (v: any) => (v == null ? "" : String(v));
+  const phases = arr(json?.phases).map((x: any) => ({ name: str(x.name), start: str(x.start), end: str(x.end), goal: str(x.goal), focus: str(x.focus) }));
+  if (!phases.length) throw new Error('No "phases" in that answer.');
+  const b = json?.budget ?? {};
+  await updatePeriod(brand, period.id, {
+    phases,
+    needs: arr(json?.needs_from_owner).map(str),
+    budget: { flow_clips: Number(b.flow_clips) || 0, chatgpt_images: Number(b.chatgpt_images) || 0, notes: str(b.notes) },
+  });
+  const t = now();
+  const tasks: Task[] = arr(json?.tasks).map((x: any) => ({
+    id: newId(),
+    period_id: period.id,
+    employee: EMPLOYEES.includes(str(x.employee)) ? str(x.employee) : "director",
+    title: str(x.title),
+    input: str(x.input),
+    output: "",
+    due: str(x.due),
+    status: "todo" as TaskStatus,
+    director_note: "",
+    versions: [],
+    created_at: t,
+    updated_at: t,
+  }));
+  // replace the period's open tasks; keep finished ones
+  await mutate<Task>(brand.id, "tasks", (d) => [...d.filter((x) => x.period_id !== period.id || x.status === "done"), ...tasks], `roadmap tasks: ${period.name}`);
+  await log(brand.id, `${who(by)} built the roadmap for "${period.name}": ${phases.length} phases, ${tasks.length} tasks.`);
+  return tasks.length;
+}
+
+/** Change a task. A new output keeps the old one as a version (restorable). */
+export async function updateTask(brand: Brand, task: Task, patch: Partial<Task>, by = currentLogin()) {
+  const versions = patch.output !== undefined && patch.output !== task.output && task.output ? [{ at: now(), by, output: task.output }, ...task.versions].slice(0, 20) : task.versions;
+  await mutate<Task>(brand.id, "tasks", (d) => d.map((x) => (x.id === task.id ? { ...x, ...patch, versions, updated_at: now() } : x)), `task: ${task.title}`);
 }

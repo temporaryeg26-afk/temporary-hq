@@ -189,3 +189,42 @@ export type AdRecord = {
   made_by: string;
   created_at: string;
 };
+
+// ------------------------------------------------------------------ the agency: periods, roadmap, tasks
+
+export type Phase = { name: string; start: string; end: string; goal: string; focus: string };
+
+export type Period = {
+  id: string;
+  name: string;
+  start: string;
+  end: string;
+  goal: string;
+  notes: string;
+  phases: Phase[];
+  /** What the Director needs from the owner before the team can finish. */
+  needs: string[];
+  /** Estimated use of the owner's plans this period. */
+  budget: { flow_clips: number; chatgpt_images: number; notes: string } | null;
+  status: "active" | "done";
+  made_by: string;
+  created_at: string;
+};
+
+export type TaskStatus = "todo" | "working" | "review" | "needs_you" | "done";
+export type TaskVersion = { at: string; by: string; output: string; note?: string };
+
+export type Task = {
+  id: string;
+  period_id: string;
+  employee: string;
+  title: string;
+  input: string;
+  output: string;
+  due: string;
+  status: TaskStatus;
+  director_note: string;
+  versions: TaskVersion[];
+  created_at: string;
+  updated_at: string;
+};
