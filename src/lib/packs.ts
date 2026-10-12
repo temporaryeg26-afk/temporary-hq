@@ -123,7 +123,9 @@ export const LENSES: { key: string; title: string; q: string }[] = [
 
 export function researchPack(brand: Brand): string {
   const today = new Date().toISOString().slice(0, 10);
-  return `You are the RESEARCH TEAM for ${brand.name}, a premium conceptual limited-edition streetwear brand from Egypt. Today is ${today}.
+  return `${skillsSheet("researcher")}
+
+You are the RESEARCH TEAM for ${brand.name}, a premium conceptual limited-edition streetwear brand from Egypt. Today is ${today}.
 
 USE YOUR WEB SEARCH. Research each topic below on the live internet. Prefer sources from the last 60 days. Be specific: names, numbers, dates. If something is unclear, say "unclear" — never invent.
 
@@ -147,7 +149,9 @@ export function labPack(brand: Brand, products: Product[], scans: Research[]): s
           .join("\n")
     )
     .join("\n\n");
-  return `You are the HEAD OF MARKETING for ${brand.name}. Your research team scanned the live internet (below). Turn it into strategy.
+  return `${skillsSheet("strategist")}
+
+You are the HEAD OF MARKETING for ${brand.name}. Your research team scanned the live internet (below). Turn it into strategy.
 
 ${brandHeader(brand)}
 
@@ -167,7 +171,10 @@ JSON shape:
 // ------------------------------------------------------------------ 3. plan (manager)
 
 export function planPack(brand: Brand, products: Product[], lab: Research | null, goal: string, days: number, history: Plan[]): string {
-  return `You are the HEAD OF MARKETING (the manager) for ${brand.name}. You set the goal and the direction. ChatGPT (your worker) will write every script, caption and prompt from your briefs, so keep each brief SHORT — one line per field. Do not write the content yourself.
+  return `${skillsSheet("director")}
+${skillsSheet("strategist")}
+
+You are the HEAD OF MARKETING (the manager) for ${brand.name}. You set the goal and the direction. ChatGPT (your worker) will write every script, caption and prompt from your briefs, so keep each brief SHORT — one line per field. Do not write the content yourself.
 
 ${brandHeader(brand)}
 
@@ -214,7 +221,11 @@ export function writePack(brand: Brand, products: Product[], items: ContentItem[
       ...(i.revision_note ? { CHANGES_REQUIRED: i.revision_note, previous_draft: JSON.stringify(i.output ?? {}).slice(0, 2500) } : {}),
     };
   });
-  return `You are the CONTENT PRODUCER for ${brand.name}. Turn each brief from the head of marketing into finished, publish-ready content. Write like the best creative studio in Cairo: sharp, premium, culturally natural, never cringe.
+  return `${skillsSheet("copywriter")}
+(For founder films you also follow the Film director's rules; for motion carousels the Motion designer's; for images the Designer's.)
+Before answering, check every piece against the Director's checklist: ${DIRECTOR_CHECKLIST.join(" · ")}
+
+You are the CONTENT PRODUCER for ${brand.name}. Turn each brief from the head of marketing into finished, publish-ready content. Write like the best creative studio in Cairo: sharp, premium, culturally natural, never cringe.
 
 ${brandHeader(brand)}
 
@@ -263,7 +274,10 @@ export function reviewPack(brand: Brand, items: ContentItem[]): string {
     rule_flags: i.rule_flags.map((f) => f.rule),
     draft: excerpt(i.output),
   }));
-  return `You are the HEAD OF MARKETING for ${brand.name}, doing the final review of drafts your team wrote. You see compact summaries. Approve what serves the goal and the brand; send back what doesn't with a ONE-line instruction. Be decisive.
+  return `${skillsSheet("director")}
+THE DIRECTOR CHECKLIST — every draft must pass all of it, or it goes back with a one-line fix: ${DIRECTOR_CHECKLIST.join(" · ")}
+
+You are the HEAD OF MARKETING for ${brand.name}, doing the final review of drafts your team wrote. You see compact summaries. Approve what serves the goal and the brand; send back what doesn't with a ONE-line instruction. Be decisive.
 Brand: premium, mysterious, individualistic, Egyptian Arabic voice. Never discount or urgency tricks; never invented stock, specs or benefits; Instagram → Google Form only.
 
 DRAFTS:
@@ -320,7 +334,9 @@ ${approved.slice(0, 30).map((i) => `- ${i.scheduled_for} ${i.format}: ${i.title}
 
 export function doctrinePack(brand: Brand, products: Product[], lab: Research | null, ownerNotes: string): string {
   const current = doctrineText(brand.doctrine);
-  return `You are the BRAND STRATEGIST and cultural architect for ${brand.name}. Build (or sharpen) the brand DOCTRINE: the worldview that makes people follow the idea first and buy the clothes second. Think like the founders of movements and cult brands, not like an ad agency. Be original, specific to Egypt and to this brand, and future-facing: we want to create trends, not follow them.
+  return `${skillsSheet("strategist")}
+
+You are the BRAND STRATEGIST and cultural architect for ${brand.name}. Build (or sharpen) the brand DOCTRINE: the worldview that makes people follow the idea first and buy the clothes second. Think like the founders of movements and cult brands, not like an ad agency. Be original, specific to Egypt and to this brand, and future-facing: we want to create trends, not follow them.
 
 ${brand.context.trim()}
 
@@ -346,7 +362,10 @@ export function sessionPack(brand: Brand, items: ContentItem[], plans: Plan[], l
   const recent = items.filter((i) => new Date(i.updated_at || i.created_at).getTime() >= since);
   const count = (s: string) => recent.filter((i) => i.status === s).length;
   const posted = recent.filter((i) => i.status === "published").map((i) => `${i.scheduled_for} ${i.format}/${i.pillar}: ${i.title}`);
-  return `You are the HEAD OF MARKETING for ${brand.name}. This is our ${days}-day production session. Review the last period honestly, check we stayed true to the doctrine, and set the direction for the next ${days} days. Think bigger than trends: what could we start that others will copy?
+  return `${skillsSheet("growth")}
+${skillsSheet("director")}
+
+You are the HEAD OF MARKETING for ${brand.name}. This is our ${days}-day production session. Review the last period honestly, check we stayed true to the doctrine, and set the direction for the next ${days} days. Think bigger than trends: what could we start that others will copy?
 
 ${brandHeader(brand)}
 
@@ -371,7 +390,9 @@ export function adsPack(brand: Brand, products: Product[], items: ContentItem[],
     .filter((i) => i.status === "published" || i.status === "approved")
     .slice(-25)
     .map((i) => `- [${i.id.slice(0, 8)}] ${i.scheduled_for} ${i.format}/${i.pillar}: ${i.title}${i.qa ? ` (score ${i.qa.score})` : ""}`);
-  return `You are the MEDIA BUYER for ${brand.name} on Instagram/Facebook (Meta Ads Manager), in Egypt. Plan paid promotion for the next ${days} days. Be specific and practical for a small premium brand: few campaigns, clear tests, clear rules for when to cut or scale.
+  return `${skillsSheet("growth")}
+
+You are the MEDIA BUYER for ${brand.name} on Instagram/Facebook (Meta Ads Manager), in Egypt. Plan paid promotion for the next ${days} days. Be specific and practical for a small premium brand: few campaigns, clear tests, clear rules for when to cut or scale.
 
 ${brandHeader(brand)}
 
@@ -392,7 +413,9 @@ JSON shape:
 }
 
 export function adReviewPack(brand: Brand, plan: AdRecord | null, results: string): string {
-  return `You are the MEDIA BUYER for ${brand.name}. Review the ad results below (pasted from Meta Ads Manager) against the plan, and decide for each campaign or ad: cut, keep, scale or fix. Be blunt and specific. Egypt, EGP.
+  return `${skillsSheet("growth")}
+
+You are the MEDIA BUYER for ${brand.name}. Review the ad results below (pasted from Meta Ads Manager) against the plan, and decide for each campaign or ad: cut, keep, scale or fix. Be blunt and specific. Egypt, EGP.
 
 PLAN: ${plan ? JSON.stringify({ strategy: plan.data.strategy, campaigns: plan.data.campaigns, rules: plan.data.rules }).slice(0, 3500) : "no saved plan"}
 
