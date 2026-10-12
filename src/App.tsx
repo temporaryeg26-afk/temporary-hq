@@ -8,6 +8,8 @@ import ResearchPage from "./pages/Research";
 import ResearchHQ from "./pages/ResearchHQ";
 import PeriodPage from "./pages/Period";
 import Studio from "./pages/Studio";
+import PlaybookPage from "./pages/Playbook";
+import CommunityPage from "./pages/Community";
 import { FilmPage, MotionPage } from "./pages/Storyboard";
 import PlanPage from "./pages/Plan";
 import ContentPage from "./pages/Content";
@@ -73,9 +75,12 @@ export const ROOMS: Room[] = [
   {
     key: "growth",
     label: "Growth",
-    what: "Reach and sales: media buying, reports and order cards.",
+    what: "Reach and sales: playbooks, media buying, reports, replies to people and order cards.",
     pages: [
+      ["/playbook", "Playbooks"],
       ["/ads", "Media buying"],
+      ["/session", "Reports"],
+      ["/community", "Community & sales"],
       ["/orders", "Order cards"],
     ],
   },
@@ -329,6 +334,8 @@ export default function App() {
       case "/approve": return <Studio view="approve" />;
       case "/week": return <WeekPage />;
       case "/ads": return <AdsPage />;
+      case "/playbook": return <PlaybookPage />;
+      case "/community": return <CommunityPage />;
       case "/orders": return <OrdersPage />;
       case "/session": return <SessionPage />;
       case "/doctrine": return <DoctrinePage />;
