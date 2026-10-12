@@ -55,7 +55,7 @@ export default function Home() {
   for (const n of P?.needs ?? []) needs.push({ text: n, action: "Give info", href: "/period", tone: "info" });
   const taskNeeds = data.tasks.filter((t) => t.status === "needs_you");
   if (taskNeeds.length) needs.push({ text: `${taskNeeds.length} team ${taskNeeds.length === 1 ? "task needs" : "tasks need"} you`, action: "Open", href: "/period", tone: "act" });
-  if (toApprove.length) needs.push({ text: `Approve ${toApprove.length} ${toApprove.length === 1 ? "piece" : "pieces"} the Director passed`, action: "Approve", href: "/content", tone: "act" });
+  if (toApprove.length) needs.push({ text: `Approve ${toApprove.length} ${toApprove.length === 1 ? "piece" : "pieces"} the Director passed`, action: "Approve", href: "/approve", tone: "act" });
   if (!report) needs.push({ text: "Run the first market research", why: "Everything the team makes is built on it.", action: "Open research", href: "/research", tone: "act" });
   else if (days(report.created_at) > 14) needs.push({ text: `Research is ${days(report.created_at)} days old — run a quick refresh`, action: "Open research", href: "/research", tone: "info" });
   if (!brand.doctrine?.updated_at) needs.push({ text: "Read and save the brand book (doctrine)", why: "Every script and caption follows it.", action: "Edit", href: "/doctrine", tone: "act" });
