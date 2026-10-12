@@ -1,7 +1,7 @@
 import { currentLogin, mutateJSON, readJSON } from "./github";
 import { autofix, checkRules } from "./rules";
 import { insert, list, mutate, newId, now } from "./store";
-import type { Activity, Brand, ContentItem, Doctrine, Plan, Product, Research, Session } from "./types";
+import type { Activity, AdRecord, Brand, ContentItem, Doctrine, Plan, Product, Research, Session } from "./types";
 
 const FORMATS = ["reel", "carousel", "static", "story", "founder_video", "motion_carousel"];
 const PILLARS = ["discovery", "philosophy", "product", "community", "conversion", "doctrine"];
@@ -277,4 +277,26 @@ export async function applySession(brand: Brand, json: any, by: string, days: nu
   await insert(brand.id, "sessions", s, "session review");
   await log(brand.id, `${who(by)} ran the ${days}-day session: ${s.review!.next_focus}`);
   return s;
+}
+
+// ------------------------------------------------------------------ media buying
+
+export async function loadAds(brandId: string): Promise<AdRecord[]> {
+  return (await list<AdRecord>(brandId, "ads")).sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export async function applyAdPlan(brand: Brand, json: any, by: string, budget: number | null, goal: string) {
+  if (!Array.isArray(json?.campaigns) && !Array.isArray(json?.tests)) throw new Error("That doesn't look like an ad plan (no campaigns / tests).");
+  const r: AdRecord = { id: newId(), kind: "plan", budget_egp: budget, goal, data: { strategy: json.strategy ?? "", campaigns: json.campaigns ?? [], tests: json.tests ?? [], measure: json.measure ?? [], rules: json.rules ?? [] }, made_by: by, created_at: now() };
+  await insert(brand.id, "ads", r, "ad plan");
+  await log(brand.id, `${who(by)} made an ad plan: ${r.data.campaigns!.length} campaigns, ${r.data.tests!.length} test ads.`);
+  return r;
+}
+
+export async function applyAdReview(brand: Brand, json: any, by: string, results: string) {
+  if (!Array.isArray(json?.verdicts)) throw new Error("That doesn't look like an ad review (no verdicts).");
+  const r: AdRecord = { id: newId(), kind: "review", budget_egp: null, goal: "", data: { summary: json.summary ?? "", verdicts: json.verdicts, next_moves: json.next_moves ?? [] }, results_text: results.slice(0, 6000), made_by: by, created_at: now() };
+  await insert(brand.id, "ads", r, "ad review");
+  await log(brand.id, `${who(by)} reviewed the ad results: ${r.data.summary}`);
+  return r;
 }
