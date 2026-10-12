@@ -534,3 +534,36 @@ JSON shape:
 "needs_from_owner":[""],
 "budget":{"flow_clips":0,"chatgpt_images":0,"notes":""}}${JSON_TAIL}`;
 }
+
+// ------------------------------------------------------------------ rewrite ONE scene / slide
+
+export function rewritePartPack(brand: Brand, item: ContentItem, kind: "scene" | "slide", n: number, note: string): string {
+  const o = item.output ?? {};
+  const parts: any[] = (kind === "scene" ? o.scenes : o.slides) ?? [];
+  const part = parts.find((p) => Number(p.n) === n) ?? parts[n - 1];
+  const who = kind === "scene" ? skillsSheet("film") : skillsSheet("motion");
+  const neighbours = parts
+    .filter((p) => Math.abs(Number(p.n) - n) === 1)
+    .map((p) => `${kind} ${p.n}: ${JSON.stringify(p)}`)
+    .join("\n");
+  return `${who}
+
+BRAND:
+${brandHeader(brand)}
+
+PIECE: "${item.title}" (${item.format})
+${kind === "scene" ? `FILM CONCEPT: ${o.concept ?? ""}\nLINE TO REMEMBER: ${o.doctrine_line ?? ""}` : `CONCEPT: ${o.concept ?? ""}\nTHROUGH-LINE: ${o.through_line ?? ""}\nBPM: ${o.bpm ?? ""}`}
+
+REWRITE ONLY ${kind.toUpperCase()} ${n}. Keep everything else as it is.
+THE OWNER'S NOTE: ${note || "(make it stronger)"}
+
+CURRENT ${kind.toUpperCase()} ${n}:
+${JSON.stringify(part ?? {}, null, 1)}
+
+NEIGHBOURS (keep continuity with them${kind === "scene" ? ": your start_frame must continue the previous end_frame, your end_frame must lead into the next start_frame" : ""}):
+${neighbours || "(none)"}
+
+RULES: ${kind === "scene" ? "exactly 10 seconds, max ~25 spoken words, one idea; video_prompt in ENGLISH, vertical 9:16, ONE continuous shot, founder only as a masked silhouette, no logo/brand text/prints." : "one idea, short big text readable without sound; every slide moves on the beat."} No competitor names, no claim we can't prove.
+
+JSON shape: {"part": { ...same fields as the current ${kind}, with "n": ${n} }}${JSON_TAIL}`;
+}

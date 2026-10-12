@@ -410,3 +410,18 @@ export async function updateTask(brand: Brand, task: Task, patch: Partial<Task>,
   const versions = patch.output !== undefined && patch.output !== task.output && task.output ? [{ at: now(), by, output: task.output }, ...task.versions].slice(0, 20) : task.versions;
   await mutate<Task>(brand.id, "tasks", (d) => d.map((x) => (x.id === task.id ? { ...x, ...patch, versions, updated_at: now() } : x)), `task: ${task.title}`);
 }
+
+/** Save a new output for a piece; the old output is kept as a restorable version. */
+export async function saveOutput(brand: Brand, item: ContentItem, output: Record<string, any>, extra: Partial<ContentItem> = {}) {
+  await mutate<ContentItem>(
+    brand.id,
+    "content",
+    (d) =>
+      d.map((x) =>
+        x.id !== item.id
+          ? x
+          : { ...x, ...extra, output, versions: x.output ? [{ at: now(), by: currentLogin(), output: x.output }, ...(x.versions ?? [])].slice(0, 15) : x.versions, updated_at: now() },
+      ),
+    `edit: ${item.title}`,
+  );
+}
