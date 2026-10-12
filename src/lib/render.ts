@@ -6,7 +6,7 @@
 import { resolveOverlays } from "./assets";
 import { currentLogin, uploadFile } from "./github";
 import { Aspect, bitmap, composite, SIZES } from "./media";
-import { insert, mutate, newId, now } from "./store";
+import { mutate, newId, now } from "./store";
 import type { ContentItem, Media } from "./types";
 import { overlayVideo } from "./video";
 
@@ -173,6 +173,20 @@ export async function renderMotion(f: Frame, aspect: Aspect, th: Theme, seconds:
   return new Blob(chunks, { type: "video/webm" });
 }
 
+/** Network hiccups happen (big uploads to GitHub): try again a few times before giving up. */
+async function retry<T>(fn: () => Promise<T>, what: string, tries = 4): Promise<T> {
+  let last: unknown;
+  for (let i = 0; i < tries; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      last = e;
+      await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+    }
+  }
+  throw new Error(`${what} failed after ${tries} tries: ${(last as Error)?.message ?? last}`);
+}
+
 export type RenderJob = { slot: string; aspect: Aspect; frame: Frame; motion: boolean };
 
 const KICKER = "اعرف قبل ما تدفع";
@@ -202,38 +216,52 @@ export function jobsFor(item: ContentItem): RenderJob[] {
 
 export const RENDERABLE = ["static", "carousel", "motion_carousel", "story"];
 
-/** Render every frame of a piece, paste the real logo, save to GitHub, and replace earlier renders. */
-export async function renderPiece(brandId: string, item: ContentItem, onStep?: (s: string) => void) {
-  const jobs = jobsFor(item);
-  if (!jobs.length) throw new Error("Nothing to render for this piece yet.");
+/** How many of a piece's frames already have a finished design. */
+export function missingJobs(item: ContentItem, media: Media[]): RenderJob[] {
+  const done = new Set(media.filter((m) => m.content_id === item.id && m.status === "done").map((m) => m.slot));
+  return jobsFor(item).filter((j) => !done.has(j.slot));
+}
+
+/**
+ * Render a piece's frames, paste the real logo, save each one to GitHub as soon as it's made
+ * (so progress is never lost), and hide earlier renders of the same slot (nothing is deleted).
+ * only = render just these slots (to resume); otherwise render all of them.
+ */
+export async function renderPiece(brandId: string, item: ContentItem, onStep?: (s: string) => void, only?: RenderJob[]) {
+  const jobs = only ?? jobsFor(item);
+  if (!jobs.length) return 0;
   const specs = item.output?.overlays?.length ? item.output.overlays : [{ asset_kind: "logo", position: "bottom-left", width_pct: 14 }];
   const story = [{ asset_kind: "logo", position: "top-left", width_pct: 14 }];
-  const made: Media[] = [];
   let theme: Theme | null = null;
+  let n = 0;
   for (const [i, j] of jobs.entries()) {
-    const { overlays, missing } = await resolveOverlays(brandId, j.aspect === "9:16" ? story : specs, item.product_id);
+    const { overlays, missing } = await retry(() => resolveOverlays(brandId, j.aspect === "9:16" ? story : specs, item.product_id), "Loading your logo");
     if (!theme) theme = await themeForLogo(overlays.find((o) => o)?.file ?? null);
     const id = newId();
+    let row: Media;
     if (!j.motion) {
       onStep?.(`Designing ${i + 1}/${jobs.length}…`);
       const base = await renderPNG(j.frame, j.aspect, theme);
       const r = await composite(base, j.aspect, overlays);
       const path = `${brandId}/files/media/${id}.png`;
-      await uploadFile(path, r.blob, `HQ (${currentLogin()}): design for ${item.title}`);
-      made.push({ id, content_id: item.id, kind: "image", slot: j.slot, made_with: "HQ renderer", status: r.pass ? "done" : "rejected", storage_path: path, base_path: path, fidelity: { method: "pixel", pass: r.pass, placements: r.placements, checks: r.checks, missing }, note: null, created_by: currentLogin(), created_at: now() });
+      onStep?.(`Saving ${i + 1}/${jobs.length}…`);
+      await retry(() => uploadFile(path, r.blob, `HQ (${currentLogin()}): design for ${item.title}`), "Saving the image");
+      row = { id, content_id: item.id, kind: "image", slot: j.slot, made_with: "HQ renderer", status: r.pass ? "done" : "rejected", storage_path: path, base_path: path, fidelity: { method: "pixel", pass: r.pass, placements: r.placements, checks: r.checks, missing }, note: null, created_by: currentLogin(), created_at: now() };
     } else {
-      onStep?.(`Animating slide ${i + 1}/${jobs.length} (${j.frame.seconds}s, keep this tab in front)…`);
+      onStep?.(`Animating slide ${i + 1}/${jobs.length} (${j.frame.seconds}s — keep this tab in front)…`);
       const webm = await renderMotion(j.frame, j.aspect, theme, j.frame.seconds ?? 5);
       onStep?.(`Converting slide ${i + 1}/${jobs.length} to MP4 + logo…`);
       const mp4 = await overlayVideo(webm, overlays.map((o) => ({ file: o.file, position: o.position, widthPct: o.widthPct })));
       const path = `${brandId}/files/media/${id}.mp4`;
-      await uploadFile(path, mp4, `HQ (${currentLogin()}): motion slide for ${item.title}`);
-      made.push({ id, content_id: item.id, kind: "video", slot: j.slot, made_with: "HQ renderer (motion)", status: "done", storage_path: path, base_path: null, fidelity: { method: "overlay", overlays: overlays.length, missing }, note: "Silent video — add music in Instagram when posting.", created_by: currentLogin(), created_at: now() });
+      onStep?.(`Saving slide ${i + 1}/${jobs.length}…`);
+      await retry(() => uploadFile(path, mp4, `HQ (${currentLogin()}): motion slide for ${item.title}`), "Saving the video");
+      row = { id, content_id: item.id, kind: "video", slot: j.slot, made_with: "HQ renderer (motion)", status: "done", storage_path: path, base_path: null, fidelity: { method: "overlay", overlays: overlays.length, missing }, note: "Silent video — add music in Instagram when posting.", created_by: currentLogin(), created_at: now() };
     }
+    await retry(
+      () => mutate<Media>(brandId, "media", (d) => [...d.map((m) => (m.content_id === item.id && m.slot === row.slot && m.status === "done" ? { ...m, status: "rejected" as const } : m)), row], `design ${row.slot} for ${item.title}`),
+      "Saving the design record",
+    );
+    n++;
   }
-  const slots = new Set(made.map((m) => m.slot));
-  // earlier renders for the same slots are kept but hidden (status rejected) — nothing is deleted
-  await mutate<Media>(brandId, "media", (d) => d.map((m) => (m.content_id === item.id && slots.has(m.slot) && m.status === "done" ? { ...m, status: "rejected" as const } : m)), "replace renders");
-  await insert<Media>(brandId, "media", made, `designs for ${item.title}`);
-  return made.length;
+  return n;
 }
