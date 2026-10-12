@@ -7,6 +7,8 @@ export type BrandSettings = {
   /** How many pieces ChatGPT writes per paste. */
   batchSize?: number;
   autoApprove?: Partial<Record<Pillar, boolean>>;
+  /** Search queries the Researcher uses (editable on the Research page). */
+  research_queries?: string[];
 };
 
 export type Brand = {
@@ -120,7 +122,37 @@ export type Media = {
   created_at: string;
 };
 
-export type Research = { id: string; kind: "scan" | "lab"; topic: string; title: string; content: any; made_by: string; created_at: string };
+export type Research = {
+  id: string;
+  kind: "scan" | "lab" | "report";
+  topic: string;
+  title: string;
+  content: any;
+  made_by: string;
+  created_at: string;
+  /** Attached by latestLab(): the newest full research report, so every pack sees it. */
+  report?: Research | null;
+};
+
+export type ResearchType = "full" | "quick" | "custom";
+export type Complaint = { quote: string; platform: string; theme: string; link: string };
+export type ResearchReport = {
+  type: ResearchType;
+  scope: string[];
+  topic?: string;
+  title: string;
+  summary: string[];
+  buyer: { who: string; age: string; money: string; hangouts: string; fears: string[] };
+  themes: { theme: string; count: number; what_people_say: string; what_we_do: string }[];
+  complaints: Complaint[];
+  gap: string;
+  checklist: { check: string; how_to_check: string; why: string }[];
+  trends: { trend: string; note: string }[];
+  seasons: { when: string; moment: string; idea: string }[];
+  ig_rules: string[];
+  risks: string[];
+  sources: { title: string; url: string }[];
+};
 
 export type Activity = { id: string; message: string; level: "info" | "warn" | "error"; created_by: string; created_at: string };
 

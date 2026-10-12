@@ -3,7 +3,8 @@
  * Each pack is a complete, self-contained instruction you paste into claude.ai or chatgpt.com.
  * The answer comes back as JSON, which the site checks and saves.
  */
-import type { AdRecord, Brand, ContentItem, Doctrine, Plan, Product, Research, Session } from "./types";
+import type { AdRecord, Brand, ContentItem, Doctrine, Plan, Product, Research, ResearchReport, ResearchType, Session } from "./types";
+import { skillsSheet } from "./agency";
 
 // ------------------------------------------------------------------ helpers
 
@@ -68,8 +69,31 @@ export function brandHeader(brand: Brand) {
   return `${brand.context.trim()}\n${doctrineText(brand.doctrine)}\nORDER FORM: ${brand.order_form_url ? brand.order_form_url : "Google Forms link in bio — say 'link in bio' / 'اللينك في البايو'"}`;
 }
 
+/** Short version of the newest research report, sent with every pack. */
+export function reportDigest(r: Research | null | undefined, max = 1800): string {
+  if (!r || r.kind !== "report") return "";
+  const t = r.content as ResearchReport;
+  const age = Math.round((Date.now() - new Date(r.created_at).getTime()) / 86400000);
+  return [
+    `MARKET RESEARCH (${age} days old, ${t.complaints?.length ?? 0} real complaints):`,
+    ...(t.summary ?? []).slice(0, 10).map((x) => `- ${x}`),
+    "TOP COMPLAINTS: " + (t.themes ?? []).slice(0, 8).map((x) => `${x.theme} (${x.count})`).join(", "),
+    "OUR GAP: " + (t.gap ?? ""),
+    "KNOW-BEFORE-YOU-PAY CHECKLIST: " + (t.checklist ?? []).map((c) => c.check).join("; "),
+    "BUYER FEARS: " + (t.buyer?.fears ?? []).join("; "),
+  ]
+    .join("\n")
+    .slice(0, max);
+}
+
 export function researchDigest(lab: Research | null | undefined, max = 2200): string {
-  if (!lab) return "No trend research yet — work from brand fundamentals.";
+  if (!lab) return "No research yet — work from brand fundamentals.";
+  const rep = reportDigest(lab.report ?? (lab.kind === "report" ? lab : null));
+  if (lab.kind === "report") return rep.slice(0, max);
+  return (rep ? rep + "\n\n" : "") + trendDigest(lab, Math.max(800, max - rep.length));
+}
+
+function trendDigest(lab: Research, max: number): string {
   const t = lab.content ?? {};
   const age = Math.round((Date.now() - new Date(lab.created_at).getTime()) / 86400000);
   return [
@@ -379,4 +403,92 @@ ${AD_RULES}
 
 JSON shape:
 {"summary":"2-4 sentences","verdicts":[{"campaign":"name","action":"cut|keep|scale|fix","why":"","change":"exact change: budget, audience, creative, hook"}],"next_moves":["3-5 concrete steps for this week"]}${JSON_TAIL}`;
+}
+
+// ------------------------------------------------------------------ RESEARCH (lives in HQ → Strategy → Research)
+
+export const RESEARCH_SCOPES: [string, string][] = [
+  ["market", "Market"],
+  ["complaints", "Complaints"],
+  ["trends", "Trends"],
+  ["competitors", "Competitors (internal only)"],
+  ["buyer", "Buyer"],
+  ["seasons", "Seasons"],
+];
+
+export const RESEARCH_PLATFORMS = [
+  "Facebook public groups and posts",
+  "Reddit (r/Egypt, r/cairo)",
+  "TikTok comments under Egyptian local-brand videos",
+  "Instagram comments under Egyptian local-brand posts",
+  "Google reviews of local brand shops",
+  "X (Twitter)",
+];
+
+export const DEFAULT_RESEARCH_QUERIES = [
+  "براند محلي غالي",
+  "البراندات المحلية غالية والخامة وحشة",
+  "الطباعة باظت بعد الغسيل",
+  "التيشيرت كش بعد الغسيل",
+  "المقاسات مش مظبوطة براند",
+  "براندات مصرية سعرها",
+  "لوكال براند نصب",
+  "local brand masr ghali",
+  "local brands egypt overpriced",
+  "local brand egypt quality",
+  "egyptian streetwear brands review reddit",
+  "limited edition local brand egypt fake",
+];
+
+export function deepResearchPrompt(type: ResearchType, scope: string[], topic: string): string {
+  const today = new Date().toISOString().slice(0, 10);
+  const focus =
+    type === "custom"
+      ? `FOCUS ONLY ON: ${topic}`
+      : type === "quick"
+      ? "QUICK REFRESH: only what changed in the last 30 days — new trends, new complaints, new moments."
+      : "FULL RESEARCH.";
+  return `Use deep research / web search. Today is ${today}. ${focus}
+Areas: ${scope.join(", ")}.
+
+Research the Egyptian local streetwear market for a new Cairo streetwear brand (Instagram: 0 followers, building trust before launching):
+1. Market 2025–now: size of the local-brand scene, typical EGP prices for tees and hoodies, where people buy (Instagram, pop-ups, websites).
+2. Buyers 18–30 in Cairo and Alexandria: who they are, money, where they spend time online, what makes them trust a NEW brand, what makes them feel scammed.
+3. Real complaints about local brands (quality vs price, print cracking, thin fabric, wrong sizes, fake "limited", copied designs, delivery and returns). Quote real posts/comments with links. Never invent quotes.
+4. Instagram and TikTok behaviour in Egypt now: formats, times, what gets shared.
+5. Seasons and moments in the next 6 months (Ramadan, summer, back-to-school, sales, events) with dates.
+6. Risks for a new brand.
+Give sources (title + URL) for every claim. Say "unclear" when unsure.`;
+}
+
+export function reportPack(brand: Brand, type: ResearchType, scope: string[], topic: string, searchNotes: string, deepNotes: string, last: Research | null): string {
+  const lastText = last ? reportDigest(last, 1500) : "No earlier report.";
+  return `${skillsSheet("director")}
+You are now writing the RESEARCH REPORT from the Researcher's raw notes.
+
+BRAND:
+${brandHeader(brand)}
+
+RESEARCH TYPE: ${type}${topic ? ` — topic: ${topic}` : ""}. AREAS: ${scope.join(", ")}.
+
+RAW NOTES 1 — real complaints and posts found on the web (quote | platform | theme | link):
+${searchNotes.trim() || "(none pasted)"}
+
+RAW NOTES 2 — deep research answer:
+${deepNotes.trim() || "(none pasted)"}
+
+LAST REPORT (for comparison):
+${lastText}
+
+RULES: use ONLY what is in the notes — never invent a quote, number or link. Remove private people's names. Competitor brand names may appear only inside complaints/sources (internal), never in "what_we_do" or the checklist. Count complaints per theme from the notes.
+
+JSON shape:
+{"title":"short title","summary":["10 short lines, the most important first"],
+"buyer":{"who":"","age":"","money":"","hangouts":"","fears":[""]},
+"themes":[{"theme":"price vs quality","count":0,"what_people_say":"","what_we_do":"how TEMPORARY answers this honestly"}],
+"complaints":[{"quote":"short real quote","platform":"","theme":"","link":""}],
+"gap":"what nobody in the market owns — our position",
+"checklist":[{"check":"fabric weight (GSM)","how_to_check":"what a buyer should ask or look at","why":""}],
+"trends":[{"trend":"","note":""}],"seasons":[{"when":"date","moment":"","idea":""}],
+"ig_rules":["Instagram rules that matter now"],"risks":[""],"sources":[{"title":"","url":""}]}${JSON_TAIL}`;
 }

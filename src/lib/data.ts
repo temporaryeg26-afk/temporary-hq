@@ -1,7 +1,7 @@
 import { currentLogin, mutateJSON, readJSON } from "./github";
 import { autofix, checkRules } from "./rules";
 import { insert, list, mutate, newId, now } from "./store";
-import type { Activity, AdRecord, Brand, ContentItem, Doctrine, Plan, Product, Research, Session } from "./types";
+import type { Activity, AdRecord, Brand, ContentItem, Doctrine, Plan, Product, Research, ResearchReport, ResearchType, Session } from "./types";
 
 const FORMATS = ["reel", "carousel", "static", "story", "founder_video", "motion_carousel"];
 const PILLARS = ["discovery", "philosophy", "product", "community", "conversion", "doctrine"];
@@ -62,8 +62,48 @@ export async function loadResearch(brandId: string): Promise<Research[]> {
   return (await list<Research>(brandId, "research")).sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
+/** Latest trend lab, with the newest full research report attached — every pack gets both. */
 export async function latestLab(brandId: string): Promise<Research | null> {
-  return (await loadResearch(brandId)).find((r) => r.kind === "lab") ?? null;
+  const all = await loadResearch(brandId);
+  const lab = all.find((r) => r.kind === "lab") ?? null;
+  const report = all.find((r) => r.kind === "report") ?? null;
+  if (!lab) return report ? { ...report, report } : null;
+  return { ...lab, report };
+}
+
+/** Keep every report; trim the old trend scans so the file stays small. */
+const keepResearch = (rows: Research[]) => [...rows.filter((r) => r.kind !== "report").slice(0, 60), ...rows.filter((r) => r.kind === "report")];
+
+export function asReport(json: any, type: ResearchType, scope: string[], topic: string): ResearchReport {
+  const arr = (v: any) => (Array.isArray(v) ? v : []);
+  const str = (v: any) => (v == null ? "" : String(v));
+  const summary = Array.isArray(json?.summary) ? json.summary.map(str) : str(json?.summary).split(/\n+/).filter(Boolean);
+  if (!summary.length && !arr(json?.complaints).length) throw new Error("That doesn't look like a research report (no summary or complaints).");
+  const b = json?.buyer ?? {};
+  return {
+    type,
+    scope,
+    topic: topic || undefined,
+    title: str(json?.title) || (type === "full" ? "Full research" : type === "quick" ? "Quick refresh" : `Research: ${topic}`),
+    summary,
+    buyer: { who: str(b.who), age: str(b.age), money: str(b.money), hangouts: str(b.hangouts), fears: arr(b.fears).map(str) },
+    themes: arr(json?.themes).map((t: any) => ({ theme: str(t.theme), count: Number(t.count) || 0, what_people_say: str(t.what_people_say), what_we_do: str(t.what_we_do) })),
+    complaints: arr(json?.complaints).map((c: any) => ({ quote: str(c.quote), platform: str(c.platform), theme: str(c.theme), link: str(c.link) })),
+    gap: str(json?.gap),
+    checklist: arr(json?.checklist).map((c: any) => ({ check: str(c.check), how_to_check: str(c.how_to_check), why: str(c.why) })),
+    trends: arr(json?.trends).map((t: any) => ({ trend: str(t.trend), note: str(t.note) })),
+    seasons: arr(json?.seasons).map((t: any) => ({ when: str(t.when), moment: str(t.moment), idea: str(t.idea) })),
+    ig_rules: arr(json?.ig_rules).map(str),
+    risks: arr(json?.risks).map(str),
+    sources: arr(json?.sources).map((x: any) => ({ title: str(x.title), url: str(x.url) })),
+  };
+}
+
+export async function saveReport(brand: Brand, report: ResearchReport, by: string) {
+  const row: Research = { id: newId(), kind: "report", topic: report.type, title: report.title, content: report, made_by: by, created_at: now() };
+  await mutate<Research>(brand.id, "research", (d) => keepResearch([row, ...d]), `research report: ${report.title}`);
+  await log(brand.id, `Researcher saved "${report.title}": ${report.complaints.length} real complaints, ${report.themes.length} themes.`);
+  return row;
 }
 
 export async function loadPlans(brandId: string): Promise<Plan[]> {
@@ -97,14 +137,14 @@ export async function applyResearch(brand: Brand, json: any, by: string) {
     created_at: now(),
   }));
   // keep the last 60 research rows so the file stays small
-  await mutate<Research>(brand.id, "research", (d) => [...rows, ...d].slice(0, 60), "trend research");
+  await mutate<Research>(brand.id, "research", (d) => keepResearch([...rows, ...d]), "trend research");
   await log(brand.id, `${who(by)} researched ${rows.length} topics on the web.`);
   return rows.length;
 }
 
 export async function applyLab(brand: Brand, json: any, by: string) {
   if (!json?.big_picture && !json?.invent) throw new Error("That doesn't look like a trend analysis (no big_picture / invent).");
-  await mutate<Research>(brand.id, "research", (d) => [{ id: newId(), kind: "lab", topic: "trend-lab", title: "Trend Lab", content: json, made_by: by, created_at: now() } as Research, ...d].slice(0, 60), "trend analysis");
+  await mutate<Research>(brand.id, "research", (d) => keepResearch([{ id: newId(), kind: "lab", topic: "trend-lab", title: "Trend Lab", content: json, made_by: by, created_at: now() } as Research, ...d]), "trend analysis");
   await log(brand.id, `${who(by)} analysed the trends: ${json.invent?.length ?? 0} invented, ${json.ride?.length ?? 0} to ride.`);
 }
 
