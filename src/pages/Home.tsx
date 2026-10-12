@@ -122,7 +122,12 @@ export default function Home() {
   return (
     <div>
       <header className="mb-8">
-        <p className="text-sm text-concrete">What this is: your agency at a glance — what needs you, what the team is doing, and where the period stands.</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-concrete">What this is: your agency at a glance — what needs you, what the team is doing, and where the period stands.</p>
+          <a href="#/run" className="rounded-ctl border border-ultra/60 px-3.5 py-2 text-sm text-plaster hover:bg-ultra/15">
+            Run the agency →
+          </a>
+        </div>
       </header>
 
       {/* Needed from you */}
