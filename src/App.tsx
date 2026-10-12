@@ -8,6 +8,7 @@ import ResearchPage from "./pages/Research";
 import ResearchHQ from "./pages/ResearchHQ";
 import PeriodPage from "./pages/Period";
 import Studio from "./pages/Studio";
+import { FilmPage, MotionPage } from "./pages/Storyboard";
 import PlanPage from "./pages/Plan";
 import ContentPage from "./pages/Content";
 import ContentDetail from "./pages/ContentDetail";
@@ -94,6 +95,7 @@ export const LIBRARY: Room = {
 
 const matches = (route: string, href: string) => (href === "/" ? route === "/" : route === href || route.startsWith(href + "/"));
 export function roomOf(route: string): Room {
+  if (/^\/(film|motion)\//.test(route)) return ROOMS[1];
   return [...ROOMS, LIBRARY].find((r) => r.pages.some(([h]) => matches(route, h))) ?? ROOMS[0];
 }
 
@@ -316,8 +318,8 @@ export default function App() {
   if (!ctx) return <p className="p-8 text-concrete">Opening HQ…</p>;
 
   const [path, id] = (() => {
-    const m = route.match(/^\/content\/(.+)$/);
-    return m ? ["/content/:id", m[1]] : [route, ""];
+    const m = route.match(/^\/(content|film|motion)\/(.+)$/);
+    return m ? [`/${m[1]}/:id`, m[2]] : [route, ""];
   })();
 
   const page = (() => {
@@ -337,6 +339,8 @@ export default function App() {
       case "/plan": return <PlanPage />;
       case "/content": return <ContentPage />;
       case "/content/:id": return <ContentDetail id={id} />;
+      case "/film/:id": return <FilmPage id={id} />;
+      case "/motion/:id": return <MotionPage id={id} />;
       case "/assets": return <AssetsPage />;
       case "/products": return <ProductsPage />;
       case "/brands": return <BrandsPage />;
