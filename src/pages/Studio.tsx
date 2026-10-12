@@ -5,7 +5,7 @@ import { loadContent, log } from "../lib/data";
 import { currentLogin, downloadFile } from "../lib/github";
 import { list, mutate, now } from "../lib/store";
 import type { ContentItem, Media } from "../lib/types";
-import { renderPiece, RENDERABLE } from "../lib/render";
+import { missingJobs, renderPiece, RENDERABLE } from "../lib/render";
 
 /** Default Cairo posting times when the plan didn't set one. */
 const DEFAULT_TIME: Record<string, string> = { reel: "20:00", founder_video: "20:30", carousel: "13:00", motion_carousel: "14:00", static: "18:00", story: "21:00" };
@@ -37,11 +37,11 @@ export default function Studio({ view }: { view: View }) {
   const mediaOf = (id: string) => data.media.filter((m) => m.content_id === id).sort((a, b) => slotNo(a.slot) - slotNo(b.slot));
   const item = data.items.find((i) => i.id === open) ?? null;
 
-  const needDesign = data.items.filter((i) => RENDERABLE.includes(i.format) && i.output && i.status !== "published" && mediaOf(i.id).length === 0);
+  const needDesign = data.items.filter((i) => RENDERABLE.includes(i.format) && i.output && i.status !== "published" && missingJobs(i, data.media).length > 0);
 
   return (
     <div>
-      {needDesign.length > 0 && <DesignBar items={needDesign} onDone={reload} />}
+      {needDesign.length > 0 && <DesignBar items={needDesign} media={data.media} onDone={reload} />}
       {view === "calendar" && <Calendar items={data.items} onOpen={setOpen} />}
       {view === "grid" && <Grid items={data.items} mediaOf={mediaOf} onOpen={setOpen} />}
       {view === "approve" && <Approvals items={data.items} mediaOf={mediaOf} onChange={reload} />}
@@ -596,7 +596,7 @@ function Editor({ item, onChange }: { item: ContentItem; onChange: () => void })
 
 // ------------------------------------------------------------------ design renderer (typographic posts, carousels, stories, motion slides)
 
-function DesignBar({ items, onDone }: { items: ContentItem[]; onDone: () => void }) {
+function DesignBar({ items, media, onDone }: { items: ContentItem[]; media: Media[]; onDone: () => void }) {
   const { brand } = useBrand();
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState<string | null>(null);
@@ -604,16 +604,19 @@ function DesignBar({ items, onDone }: { items: ContentItem[]; onDone: () => void
   const run = async () => {
     setBusy(true);
     setErr(null);
-    try {
-      for (const [n, it] of items.entries()) {
-        await renderPiece(brand.id, it, (s) => setStep(`${n + 1}/${items.length} · ${it.title.slice(0, 40)} — ${s}`));
+    const failed: string[] = [];
+    let made = 0;
+    for (const [n, it] of items.entries()) {
+      try {
+        made += await renderPiece(brand.id, it, (s) => setStep(`${n + 1}/${items.length} · ${it.title.slice(0, 40)} — ${s}`), missingJobs(it, media));
+      } catch (e) {
+        failed.push(`${it.title.slice(0, 40)}: ${(e as Error).message}`);
       }
-      await log(brand.id, `${currentLogin()} made designs for ${items.length} pieces with the HQ renderer.`);
-      setStep(null);
-      onDone();
-    } catch (e) {
-      setErr((e as Error).message);
     }
+    await log(brand.id, `${currentLogin()} made ${made} designs with the HQ renderer${failed.length ? `; ${failed.length} pieces need a retry` : ""}.`).catch(() => null);
+    setStep(null);
+    if (failed.length) setErr(`Made ${made} designs. ${failed.length} ${failed.length === 1 ? "piece" : "pieces"} hit a network error — press Make designs again to finish them (finished slides are kept). ${failed.join(" · ")}`);
+    onDone();
     setBusy(false);
   };
   return (

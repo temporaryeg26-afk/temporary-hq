@@ -204,6 +204,8 @@ function PostCard({ item, media, onChange }: { item: ContentItem; media: Media[]
         </div>
       )}
 
+      <HowToPost item={item} media={media} caption={caption} hashtags={hashtags} time={timeOf(item)} />
+
       <ErrorNote msg={err} />
       {!posted && (
         <div className="mt-4">
@@ -241,6 +243,113 @@ function MediaThumb({ m, n, title }: { m: Media; n: number; title: string }) {
         </a>
       ) : (
         <span className="mt-1 block text-xs text-concrete">Loading…</span>
+      )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ the Instagram walkthrough for one post
+
+function stepsFor(item: ContentItem, n: number, time: string): string[] {
+  const o = item.output ?? {};
+  const pinned = o.pinned_comment ? "Pin the comment: post it as the first comment, then long-press it → Pin." : "";
+  const sched = `Advanced settings → Schedule → ${item.scheduled_for} at ${time} (or share right at ${time}).`;
+  const founder = item.format === "founder_video" ? "Advanced settings → turn on “AI info” (Meta requires it for realistic AI video). Nothing about AI in the caption." : "";
+  if (item.format === "story")
+    return [
+      `Download the ${n} story ${n === 1 ? "frame" : "frames"} (Download all).`,
+      "Instagram → your photo (+) → Story → pick frame 1.",
+      "Add the sticker shown below for each frame (Poll / Question / Quiz) with the exact text.",
+      "Share to Your story. Repeat for the next frames in order.",
+      `Post between ${time} and 23:00.`,
+      "Press “Posted / scheduled” here.",
+    ].filter(Boolean);
+  if (item.format === "carousel" || item.format === "motion_carousel")
+    return [
+      `Download all ${n} slides — they are numbered 01, 02, 03… in the right order.`,
+      "Instagram → + → Post → tap “Select multiple” → choose the slides in order 01 → last.",
+      "Keep the 4:5 crop (tap the crop icon once if it shows square). Next.",
+      item.format === "motion_carousel" ? "Tap “Add music” → pick a calm/driving track (around 110 BPM). The slides are silent on purpose." : "Optional: Add music → a calm track helps reach.",
+      "Next → paste the caption (Copy caption + hashtags).",
+      sched,
+      pinned,
+      "Press “Posted / scheduled” here.",
+    ].filter(Boolean);
+  if (item.format === "reel" || item.format === "founder_video")
+    return [
+      "Download the video.",
+      "Instagram → + → Reel → choose the video → add a sound (trending, low volume under the voice).",
+      "Edit cover: pick the frame with the strongest text.",
+      "Next → paste the caption (Copy caption + hashtags).",
+      founder,
+      sched,
+      pinned,
+      "Press “Posted / scheduled” here.",
+    ].filter(Boolean);
+  return [
+    "Download the image.",
+    "Instagram → + → Post → choose it → keep the 4:5 crop. Next.",
+    "Optional: Add music.",
+    "Next → paste the caption (Copy caption + hashtags).",
+    sched,
+    pinned,
+    "Press “Posted / scheduled” here.",
+  ].filter(Boolean);
+}
+
+function HowToPost({ item, media, caption, hashtags, time }: { item: ContentItem; media: Media[]; caption: string; hashtags: string; time: string }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const full = [caption.replace(/(\s*#[^\s#]+)+\s*$/u, "").trim(), hashtags].filter(Boolean).join("\n\n");
+  const frames: any[] = item.output?.frames ?? [];
+  const downloadAll = async () => {
+    setBusy(true);
+    for (const [i, m] of media.entries()) {
+      const b = await downloadFile(m.storage_path!);
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(b);
+      a.download = `${item.scheduled_for}-${String(i + 1).padStart(2, "0")}.${m.kind === "video" ? "mp4" : "png"}`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      await new Promise((r) => setTimeout(r, 700));
+    }
+    setBusy(false);
+  };
+  return (
+    <div className="mt-4 rounded-ctl border border-rule">
+      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between px-3 py-2 text-left text-sm">
+        <span className="font-medium">How to post this on Instagram</span>
+        <span className="text-concrete">{open ? "Hide" : "Show steps"}</span>
+      </button>
+      {open && (
+        <div className="space-y-3 border-t border-rule p-3 text-sm">
+          <div className="flex flex-wrap gap-3">
+            {media.length > 0 && (
+              <Button onClick={downloadAll} busy={busy}>
+                Download all{media.length > 1 ? ` (${media.length}, in order)` : ""}
+              </Button>
+            )}
+            {full && <Copy text={full} label="Copy caption + hashtags" />}
+          </div>
+          <ol className="list-decimal space-y-1.5 pl-5">
+            {stepsFor(item, media.length || 1, time).map((s, i) => (
+              <li key={i}>{s}</li>
+            ))}
+          </ol>
+          {item.format === "story" && frames.length > 0 && (
+            <div>
+              <p className="text-xs text-concrete">Stickers to add</p>
+              <ul className="mt-1 space-y-1">
+                {frames.map((f, i) => (
+                  <li key={i} dir="auto" className="rounded-ctl border border-rule px-2 py-1">
+                    <span className="text-concrete">Frame {i + 1} · {f.type ?? "frame"}: </span>
+                    {f.sticker || "no sticker"}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
