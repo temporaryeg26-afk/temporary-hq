@@ -90,7 +90,7 @@ export default function PeriodPage({ isNew }: { isNew?: boolean }) {
           to={manager}
           title={`Build the roadmap with ${aiName(manager)}`}
           why="The Director and Strategist split the period into phases, write the tasks for each employee (detailed for the first 2 weeks) and list what they need from you."
-          makePack={async () => roadmapPack(brand, products, await latestLab(brand.id), p, last)}
+          makePack={async () => roadmapPack(brand, products, await latestLab(brand.id), p, last, brand.settings?.detail_days ?? 14)}
           onAnswer={async (json) => {
             const n = await applyRoadmap(brand, p, json, manager);
             await reload();
@@ -114,7 +114,7 @@ export default function PeriodPage({ isNew }: { isNew?: boolean }) {
                 to={manager}
                 title="Rebuild the roadmap"
                 why="Use this at each review: the Director adjusts the phases and writes the next 1–2 weeks of tasks."
-                makePack={async () => roadmapPack(brand, products, await latestLab(brand.id), p, last)}
+                makePack={async () => roadmapPack(brand, products, await latestLab(brand.id), p, last, brand.settings?.detail_days ?? 14)}
                 onAnswer={async (json) => {
                   const n = await applyRoadmap(brand, p, json, manager);
                   await reload();
@@ -152,7 +152,7 @@ function NewPeriod({ hasActive, onDone }: { hasActive: boolean; onDone: () => vo
   const today = iso(new Date());
   const [name, setName] = useState("");
   const [start, setStart] = useState(today);
-  const [end, setEnd] = useState(addDays(today, 14));
+  const [end, setEnd] = useState(addDays(today, brand.settings?.period_days ?? 14));
   const [goal, setGoal] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);

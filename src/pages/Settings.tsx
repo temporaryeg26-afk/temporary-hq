@@ -59,6 +59,34 @@ export default function SettingsPage() {
       <ErrorNote msg={err} />
       {msg && <p className="mb-4 text-sm text-moss">{msg}</p>}
 
+      <Panel className="mb-5 space-y-5">
+        <h2 className="wide font-semibold">Agency</h2>
+        <div>
+          <p className="mb-2 text-sm text-concrete">Default length of a new period (you can still change it each time)</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {([["2 weeks", 14], ["30 days", 30], ["90 days", 90], ["180 days", 180]] as const).map(([l, n]) => (
+              <button key={n} onClick={() => setS({ ...s, period_days: n })} className={`rounded-ctl border px-3 py-1.5 text-sm ${(s.period_days ?? 14) === n ? "border-ultra bg-ultra/15" : "border-rule text-concrete"}`}>
+                {l}
+              </button>
+            ))}
+            <span className="ml-2 text-sm text-concrete">or</span>
+            <input aria-label="Custom days" type="number" min={3} max={365} className="w-24" value={s.period_days ?? 14} onChange={(e) => setS({ ...s, period_days: Math.max(3, Number(e.target.value) || 14) })} />
+            <span className="text-sm text-concrete">days</span>
+          </div>
+        </div>
+        <div>
+          <p className="mb-2 text-sm text-concrete">The team produces everything in full detail for the next</p>
+          <div className="flex gap-2">
+            {([["1 week", 7], ["2 weeks", 14]] as const).map(([l, n]) => (
+              <button key={n} onClick={() => setS({ ...s, detail_days: n })} className={`rounded-ctl border px-3 py-1.5 text-sm ${(s.detail_days ?? 14) === n ? "border-ultra bg-ultra/15" : "border-rule text-concrete"}`}>
+                {l}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-concrete">The rest of a long period stays as a roadmap until the next review.</p>
+        </div>
+      </Panel>
+
       <div className="grid gap-5 lg:grid-cols-2">
         <Panel className="space-y-5">
           <h2 className="wide font-semibold">The team</h2>
