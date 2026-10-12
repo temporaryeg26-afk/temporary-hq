@@ -3,7 +3,7 @@
  * Each pack is a complete, self-contained instruction you paste into claude.ai or chatgpt.com.
  * The answer comes back as JSON, which the site checks and saves.
  */
-import type { Brand, ContentItem, Plan, Product, Research } from "./types";
+import type { Brand, ContentItem, Doctrine, Plan, Product, Research, Session } from "./types";
 
 // ------------------------------------------------------------------ helpers
 
@@ -43,8 +43,29 @@ export function catalogueText(products: Product[]): string {
   );
 }
 
+export const DOCTRINE_FIELDS: [keyof Doctrine, string, string][] = [
+  ["belief", "Core belief", "The one idea the brand exists for."],
+  ["manifesto", "Manifesto", "The short text people could quote and repeat."],
+  ["for_who", "Who it's for", "The people who already think like us — and why."],
+  ["enemy", "What we stand against", "An idea, habit or mindset — never a person or a competitor."],
+  ["promise", "Our promise", "What a follower and a buyer get from us."],
+  ["voice", "Voice", "How we sound: rhythm, language mix, attitude."],
+  ["words_we_use", "Words & phrases we own", "Recurring lines and coined words."],
+  ["words_we_never_use", "Words we never use", "Clichés and tones that break the brand."],
+  ["symbols", "Symbols & visual codes", "Mask, numbers, colours, gestures, recurring images."],
+  ["rituals", "Rituals", "Things followers do: replies, codes, signs, drop-day habits."],
+  ["signature_series", "Signature series", "Recurring formats that belong only to us."],
+  ["future_vision", "Where we're going", "The future the brand is building — chapters, drops, the bigger story."],
+];
+
+export function doctrineText(d?: Doctrine | null) {
+  if (!d) return "";
+  const lines = DOCTRINE_FIELDS.filter(([k]) => (d[k] ?? "").toString().trim()).map(([k, label]) => `- ${label}: ${(d[k] as string).trim()}`);
+  return lines.length ? `DOCTRINE (the brand's worldview — every piece must express it):\n${lines.join("\n")}` : "";
+}
+
 export function brandHeader(brand: Brand) {
-  return `${brand.context.trim()}\nORDER FORM: ${brand.order_form_url ? brand.order_form_url : "Google Forms link in bio — say 'link in bio' / 'اللينك في البايو'"}`;
+  return `${brand.context.trim()}\n${doctrineText(brand.doctrine)}\nORDER FORM: ${brand.order_form_url ? brand.order_form_url : "Google Forms link in bio — say 'link in bio' / 'اللينك في البايو'"}`;
 }
 
 export function researchDigest(lab: Research | null | undefined, max = 2200): string {
@@ -137,10 +158,12 @@ TASK: plan the next ${days} days.
 Owner's goal: ${goal || "Build curiosity and belief, then turn interest into orders for available products."}
 
 Plan for real commercial results (qualified DMs, order-form visits, delivered orders), not vanity. Respect the pillar split, weekly rhythm and monthly arc. Direct-response posts only for products with status "available"; others only in teasers without prices. Set needs_real_footage=true whenever fit, on-body or garment-detail truth is needed. About one story set every 2 days.
+FORMATS: "founder_video" = a 60-second masked-founder film made of 6 connected 10-second scenes (one per week is plenty; it carries the doctrine). "motion_carousel" = a carousel where every slide moves, with music and sound effects on the beat, and slides that visually flow into each other (aim for 1-2 per week; they are made in code, so they can be bold). "doctrine" pillar = posts that teach the worldview (beliefs, symbols, rituals, signature series) so people follow the idea, not just the clothes.
+Do not only follow trends: plan at least one piece per week that could START a trend — a new format, ritual, phrase or visual code that belongs to the brand.
 
 JSON shape:
 {"title":"campaign name","goal":"one measurable goal","strategy":"3-5 sentences","weeks":[{"week":1,"focus":"","notes":""}],"kpis":[""],
-"items":[{"day":1,"format":"reel|carousel|static|story","pillar":"discovery|philosophy|product|community|conversion","product_code":"03 or null","audience":"1|2|3|4","direction":"A|B|C","objective":"","angle":"the idea in one line","hook_direction":"","cta":"","needs_real_footage":false}]}${JSON_TAIL}`;
+"items":[{"day":1,"format":"reel|carousel|static|story|founder_video|motion_carousel","pillar":"discovery|philosophy|product|community|conversion|doctrine","product_code":"03 or null","audience":"1|2|3|4","direction":"A|B|C","objective":"","angle":"the idea in one line","hook_direction":"","cta":"","needs_real_footage":false}]}${JSON_TAIL}`;
 }
 
 // ------------------------------------------------------------------ 4. write (worker, ChatGPT)
@@ -149,6 +172,8 @@ export const FORMAT_SPECS: Record<string, string> = {
   reel: `{"hooks":["3 first-second hooks"],"chosen_hook":"","duration_s":15,"script":"voiceover/dialogue in natural Egyptian Arabic (brand name in English)","subtitles":[""],"shots":[{"t":"0-2s","visual":"","camera":"","on_screen_text":""}],"sound":"commercially licensable direction","editing_rhythm":"","video_prompt":"ENGLISH, vertical 9:16, one continuous scene, no logo/brand text/prints, founder only as a masked silhouette from behind or in shadow","overlays":[{"asset_kind":"logo","position":"top-right","width_pct":16}],"needs_real_footage":false,"real_footage_shotlist":[""],"caption":"","hashtags":["5-8"],"cta":"","pinned_comment":"","metric":""}`,
   carousel: `{"audience_problem":"","hooks":["3 cover headlines"],"slides":[{"n":1,"purpose":"","copy":"exact short slide text","visual":"","image_prompt":"ENGLISH, 4:5, clean negative space for text, no logo/text/prints"}],"swipe_reason":"","final_cta":"","overlays":[{"asset_kind":"logo","position":"bottom-right","width_pct":14}],"caption":"","hashtags":[""],"pinned_comment":"","metric":""}  (6-9 slides, slide 1 = cover)`,
   static: `{"headline":"","copy":"","visual":"","image_prompt":"ENGLISH, 4:5, no logo/text/prints","overlays":[{"asset_kind":"logo","position":"bottom-right","width_pct":14}],"caption":"","hashtags":[""],"cta":"","metric":""}`,
+  founder_video: `{"concept":"the one idea of the film","doctrine_line":"the line people should remember","voiceover_language":"Egyptian Arabic","scenes":[{"n":1,"seconds":10,"purpose":"hook|tension|turn|reveal|belief|call","voiceover":"exact words for these 10s","on_screen_text":"","visual":"what we see","start_frame":"exact description of the first frame (must match the previous scene's end_frame)","end_frame":"exact description of the last frame (the next scene starts here)","camera":"","video_prompt":"ENGLISH, vertical 9:16, ONE continuous 10-second shot, founder only as a masked silhouette from behind or in shadow, no logo/brand text/prints"}],"music":"commercially licensable direction + BPM","sound_design":"","overlays":[{"asset_kind":"mask","position":"center","width_pct":30},{"asset_kind":"logo","position":"top-right","width_pct":14}],"caption":"","hashtags":[""],"cta":"","pinned_comment":"","metric":""}  (EXACTLY 6 scenes of 10 seconds; scene N's start_frame continues scene N-1's end_frame so the 6 clips cut together as one film)`,
+  motion_carousel: `{"concept":"","bpm":110,"music":"mood + instruments (royalty-free / made by us)","palette":["hex colours"],"through_line":"the visual element that travels from slide to slide (a line, a ball, the mask, a number) so the carousel feels like one piece","slides":[{"n":1,"seconds":6,"copy":"exact short slide text","motion":"what moves, how, and on which beat","transition_out":"how this slide hands over to the next one","sfx":["sound effect on beat X"],"image_prompt":"ENGLISH 4:5 background only if a photo is needed, else empty"}],"swipe_reason":"","overlays":[{"asset_kind":"logo","position":"bottom-right","width_pct":14}],"caption":"","hashtags":[""],"cta":"","pinned_comment":"","metric":""}  (6-10 slides, slide 1 = cover, every slide moves; Claude renders them as videos)`,
   story: `{"frames":[{"n":1,"type":"poll|question|clip|info|order_steps|reminder","text":"","sticker":"poll options / question / link","visual":"","image_prompt":"ENGLISH, 9:16, no logo/text/prints"}],"overlays":[{"asset_kind":"logo","position":"top-left","width_pct":12}],"goal":"","metric":""}  (3-6 frames)`,
 };
 
@@ -265,4 +290,50 @@ ${researchDigest(lab, 4000)}
 ## Recently approved content
 ${approved.slice(0, 30).map((i) => `- ${i.scheduled_for} ${i.format}: ${i.title}`).join("\n") || "None yet."}
 `;
+}
+
+// ------------------------------------------------------------------ 8. doctrine (manager)
+
+export function doctrinePack(brand: Brand, products: Product[], lab: Research | null, ownerNotes: string): string {
+  const current = doctrineText(brand.doctrine);
+  return `You are the BRAND STRATEGIST and cultural architect for ${brand.name}. Build (or sharpen) the brand DOCTRINE: the worldview that makes people follow the idea first and buy the clothes second. Think like the founders of movements and cult brands, not like an ad agency. Be original, specific to Egypt and to this brand, and future-facing: we want to create trends, not follow them.
+
+${brand.context.trim()}
+
+${catalogueText(products)}
+
+${current ? "CURRENT DOCTRINE (improve it, keep what is strong):\n" + current : "No doctrine yet — create it."}
+
+LATEST RESEARCH:
+${researchDigest(lab, 1500)}
+
+OWNER'S NOTES: ${ownerNotes || "none"}
+
+RULES: the enemy is an idea or mindset, never a person, group or competitor. No fake claims about the products. Write in the language each field naturally belongs in (Egyptian Arabic for lines people repeat, English where premium).
+
+JSON shape:
+{${DOCTRINE_FIELDS.map(([k]) => `"${k}":""`).join(",")},"first_posts":["3 post ideas that would introduce this doctrine"]}${JSON_TAIL}`;
+}
+
+// ------------------------------------------------------------------ 9. session review (manager)
+
+export function sessionPack(brand: Brand, items: ContentItem[], plans: Plan[], last: Session | null, days: number, notes: string): string {
+  const since = last ? new Date(last.created_at).getTime() : 0;
+  const recent = items.filter((i) => new Date(i.updated_at || i.created_at).getTime() >= since);
+  const count = (s: string) => recent.filter((i) => i.status === s).length;
+  const posted = recent.filter((i) => i.status === "published").map((i) => `${i.scheduled_for} ${i.format}/${i.pillar}: ${i.title}`);
+  return `You are the HEAD OF MARKETING for ${brand.name}. This is our ${days}-day production session. Review the last period honestly, check we stayed true to the doctrine, and set the direction for the next ${days} days. Think bigger than trends: what could we start that others will copy?
+
+${brandHeader(brand)}
+
+LAST SESSION: ${last?.review ? `${last.created_at.slice(0, 10)} — focus: ${last.review.next_focus}; goal: ${last.review.next_goal}` : "none (first session)"}
+LATEST PLAN: ${plans[0] ? `${plans[0].title} — ${plans[0].goal}` : "none"}
+SINCE THEN: ${recent.length} pieces touched — posted ${count("published")}, approved ${count("approved")}, waiting for the owner ${count("needs_you")}, unwritten ${count("brief")}, rejected ${count("rejected")}.
+POSTED:
+${posted.slice(0, 40).join("\n") || "nothing posted yet"}
+
+OWNER'S RESULTS & NOTES (followers, DMs, orders, what people said): ${notes || "none given — ask for them in next_focus if needed"}
+
+JSON shape:
+{"wins":[""],"misses":[""],"lessons":[""],"doctrine_check":"are we expressing the doctrine? where not?","bold_bets":["2-4 trend-starting ideas for the next period"],"next_focus":"one sentence","next_goal":"the goal to paste into the plan, measurable"}${JSON_TAIL}`;
 }
