@@ -2,7 +2,7 @@ import { go, useBrand } from "../App";
 import { ErrorNote, Loading, useAsync } from "../components/ui";
 import { TEAM, EmployeeId } from "../lib/agency";
 import { loadAssets } from "../lib/assets";
-import { loadContent, loadPlans, loadResearch, loadSessions, loadAds } from "../lib/data";
+import { loadContent, loadPlans, loadResearch, loadSessions, loadAds, loadPeriods, loadTasks } from "../lib/data";
 import type { ContentItem } from "../lib/types";
 
 type Need = { text: string; why?: string; action: string; href: string; tone: "act" | "info" };
@@ -21,15 +21,18 @@ const days = (iso: string) => Math.floor((Date.now() - new Date(iso).getTime()) 
 export default function Home() {
   const { brand, products } = useBrand();
   const { data, error } = useAsync(async () => {
-    const [items, assets, research, plans, sessions, ads] = await Promise.all([
+    const [items, assets, research, plans, sessions, ads, periods, tasks] = await Promise.all([
       loadContent(brand.id),
       loadAssets(brand.id),
       loadResearch(brand.id),
       loadPlans(brand.id),
       loadSessions(brand.id),
       loadAds(brand.id),
+      loadPeriods(brand.id),
+      loadTasks(brand.id),
     ]);
-    return { items, assets, research, plans, sessions, ads };
+    const period = periods.find((p) => p.status === "active") ?? null;
+    return { items, assets, research, plans, sessions, ads, period, tasks: period ? tasks.filter((t) => t.period_id === period.id) : [] };
   }, [brand.id]);
 
   if (error) return <ErrorNote msg={error} />;
@@ -46,6 +49,12 @@ export default function Home() {
   const postToday = by((i) => i.status === "approved" && i.scheduled_for <= today);
   if (postToday.length) needs.push({ text: `Post ${postToday.length} approved ${postToday.length === 1 ? "piece" : "pieces"} today`, action: "Post now", href: "/week", tone: "act" });
   const toApprove = by((i) => i.status === "needs_you");
+  const P = data.period;
+  if (!P) needs.push({ text: "Start a period", why: "Pick the length and goal — the Director builds the roadmap from it.", action: "New period", href: "/period/new", tone: "act" });
+  else if (!P.phases.length) needs.push({ text: `Build the roadmap for "${P.name}"`, action: "Open roadmap", href: "/period", tone: "act" });
+  for (const n of P?.needs ?? []) needs.push({ text: n, action: "Give info", href: "/period", tone: "info" });
+  const taskNeeds = data.tasks.filter((t) => t.status === "needs_you");
+  if (taskNeeds.length) needs.push({ text: `${taskNeeds.length} team ${taskNeeds.length === 1 ? "task needs" : "tasks need"} you`, action: "Open", href: "/period", tone: "act" });
   if (toApprove.length) needs.push({ text: `Approve ${toApprove.length} ${toApprove.length === 1 ? "piece" : "pieces"} the Director passed`, action: "Approve", href: "/content", tone: "act" });
   if (!report) needs.push({ text: "Run the first market research", why: "Everything the team makes is built on it.", action: "Open research", href: "/research", tone: "act" });
   else if (days(report.created_at) > 14) needs.push({ text: `Research is ${days(report.created_at)} days old — run a quick refresh`, action: "Open research", href: "/research", tone: "info" });
@@ -87,11 +96,25 @@ export default function Home() {
     growth: data.ads[0] ? { status: "done", task: `Last ${data.ads[0].kind === "plan" ? "ad plan" : "review"} ${days(data.ads[0].created_at)} days ago` } : { status: "idle", task: "Organic first — ads unlock after week 1" },
   };
 
+  // tasks override the guesses above
+  for (const e of TEAM) {
+    const mine = data.tasks.filter((t) => t.employee === e.id);
+    if (!mine.length) continue;
+    const open = mine.filter((t) => t.status !== "done");
+    const pick = open.find((t) => t.status === "needs_you") ?? open.find((t) => t.status === "review") ?? open.find((t) => t.status === "working") ?? open.sort((a, b) => a.due.localeCompare(b.due))[0];
+    work[e.id] = !pick
+      ? { status: "done", task: `All ${mine.length} tasks done` }
+      : {
+          status: pick.status === "needs_you" ? "waiting_you" : pick.status === "review" ? "waiting_director" : pick.status === "working" ? "working" : "idle",
+          task: `${pick.title} · ${open.length} open`,
+        };
+  }
+
   // ---------------------------------------------------------------- current period
-  const s = data.sessions[0];
-  const plan = data.plans[0];
-  const start = s?.period_start ?? (plan ? plan.created_at.slice(0, 10) : null);
-  const len = s?.days ?? (plan ? Math.max(7, (plan.data.weeks?.length ?? 1) * 7) : 0);
+  const s = P ? null : data.sessions[0];
+  const plan = P ? null : data.plans[0];
+  const start = P?.start ?? s?.period_start ?? (plan ? plan.created_at.slice(0, 10) : null);
+  const len = P ? Math.round((new Date(P.end).getTime() - new Date(P.start).getTime()) / 86400000) : s?.days ?? (plan ? Math.max(7, (plan.data.weeks?.length ?? 1) * 7) : 0);
   const elapsed = start ? Math.min(len, Math.max(0, days(start))) : 0;
   const end = start ? new Date(new Date(start + "T12:00:00").getTime() + len * 86400000).toISOString().slice(0, 10) : null;
   const fmt = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -137,15 +160,15 @@ export default function Home() {
             {start && end ? (
               <>
                 <p className="wide mt-1 text-lg font-semibold" dir="auto">
-                  {s?.review?.next_focus || plan?.title || "Current plan"}
+                  {P?.name || s?.review?.next_focus || plan?.title || "Current plan"}
                 </p>
                 <p className="text-sm text-concrete">
                   {fmt(start)} → {fmt(end)} · {len} days
                 </p>
-                {(s?.review?.next_goal || plan?.goal) && (
+                {(P?.goal || s?.review?.next_goal || plan?.goal) && (
                   <p className="mt-2 max-w-2xl text-sm" dir="auto">
                     <span className="text-concrete">Goal: </span>
-                    {s?.review?.next_goal || plan?.goal}
+                    {P?.goal || s?.review?.next_goal || plan?.goal}
                   </p>
                 )}
               </>
@@ -153,8 +176,8 @@ export default function Home() {
               <p className="wide mt-1 text-lg font-semibold">No period running</p>
             )}
           </div>
-          <button onClick={() => go("/session")} className="rounded-ctl bg-ultra px-4 py-2 text-sm font-medium text-white hover:bg-[#5d6cff]">
-            New period
+          <button onClick={() => go(P ? "/period" : "/period/new")} className="rounded-ctl bg-ultra px-4 py-2 text-sm font-medium text-white hover:bg-[#5d6cff]">
+            {P ? "Open roadmap" : "New period"}
           </button>
         </div>
         {start && (
