@@ -425,3 +425,18 @@ export async function saveOutput(brand: Brand, item: ContentItem, output: Record
     `edit: ${item.title}`,
   );
 }
+
+/** Move a period: new dates, and the roadmap phases + open task due dates shift with the start. */
+export async function movePeriod(brand: Brand, period: Period, patch: { name: string; goal: string; start: string; end: string }) {
+  if (patch.end <= patch.start) throw new Error("The end date must be after the start date.");
+  const shift = Math.round((new Date(patch.start + "T12:00:00").getTime() - new Date(period.start + "T12:00:00").getTime()) / 86400000);
+  const mv = (d: string) => {
+    if (!d || !shift) return d;
+    const x = new Date(d + "T12:00:00");
+    x.setDate(x.getDate() + shift);
+    return x.toISOString().slice(0, 10);
+  };
+  await updatePeriod(brand, period.id, { ...patch, phases: period.phases.map((ph) => ({ ...ph, start: mv(ph.start), end: mv(ph.end) })) });
+  if (shift) await mutate<Task>(brand.id, "tasks", (d) => d.map((t) => (t.period_id === period.id && t.status !== "done" ? { ...t, due: mv(t.due) } : t)), `move tasks ${shift} days`);
+  await log(brand.id, `Period "${patch.name}" now ${patch.start} → ${patch.end}${shift ? ` (roadmap moved ${shift} days)` : ""}.`);
+}
