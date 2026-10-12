@@ -4,12 +4,22 @@ import Relay from "../components/Relay";
 import { aiName, ErrorNote, PageHead, Panel, Status, Text, useAsync } from "../components/ui";
 import { applyPlan, latestLab, loadContent, loadPlans } from "../lib/data";
 import { planPack } from "../lib/packs";
+import { PLAN_PREFILL_KEY } from "./Session";
+
+function readPrefill(): { goal?: string; days?: number } {
+  try {
+    return JSON.parse(localStorage.getItem(PLAN_PREFILL_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
 
 export default function PlanPage() {
   const { brand, products } = useBrand();
   const manager = brand.settings?.manager ?? "claude";
-  const [goal, setGoal] = useState("");
-  const [days, setDays] = useState(30);
+  const [prefill] = useState(readPrefill);
+  const [goal, setGoal] = useState(prefill.goal ?? "");
+  const [days, setDays] = useState(prefill.days ?? 14);
   const [start, setStart] = useState(new Date(Date.now() + 86400000).toISOString().slice(0, 10));
 
   const { data, error, reload } = useAsync(async () => {
