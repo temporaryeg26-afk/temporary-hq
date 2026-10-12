@@ -6,6 +6,7 @@ import { Button, ErrorNote } from "./components/ui";
 import Home from "./pages/Home";
 import ResearchPage from "./pages/Research";
 import ResearchHQ from "./pages/ResearchHQ";
+import PeriodPage from "./pages/Period";
 import PlanPage from "./pages/Plan";
 import ContentPage from "./pages/Content";
 import ContentDetail from "./pages/ContentDetail";
@@ -57,8 +58,9 @@ export const ROOMS: Room[] = [
   {
     key: "strategy",
     label: "Strategy",
-    what: "What we know and what we stand for: research, the brand book and trends.",
+    what: "Where we are going and what we know: the period roadmap, research, the brand book and trends.",
     pages: [
+      ["/period", "Roadmap"],
       ["/research", "Research"],
       ["/doctrine", "Brand book"],
       ["/trends", "Trend radar"],
@@ -322,6 +324,8 @@ export default function App() {
       case "/orders": return <OrdersPage />;
       case "/session": return <SessionPage />;
       case "/doctrine": return <DoctrinePage />;
+      case "/period": return <PeriodPage />;
+      case "/period/new": return <PeriodPage isNew />;
       case "/research": return <ResearchHQ />;
       case "/trends": return <ResearchPage />;
       case "/plan": return <PlanPage />;
