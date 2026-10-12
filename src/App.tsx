@@ -3,7 +3,7 @@ import { DEFAULT_REPO, getSession, repoUrl, signIn, signOut } from "./lib/github
 import { loadBrand, loadBrands, loadProducts, saveBrand, setActiveBrand } from "./lib/data";
 import type { Brand, Product } from "./lib/types";
 import { Button, ErrorNote } from "./components/ui";
-import Overview from "./pages/Overview";
+import Home from "./pages/Home";
 import ResearchPage from "./pages/Research";
 import PlanPage from "./pages/Plan";
 import ContentPage from "./pages/Content";
@@ -37,26 +37,63 @@ type Ctx = { brand: Brand; products: Product[]; brands: Brand[]; email: string; 
 const BrandCtx = createContext<Ctx | null>(null);
 export const useBrand = () => useContext(BrandCtx)!;
 
-const NAV = [
-  ["/", "Overview"],
-  ["/week", "This week"],
-  ["/session", "Session"],
-  ["/doctrine", "Doctrine"],
-  ["/research", "Trend Radar"],
-  ["/plan", "Plan"],
-  ["/content", "Content"],
-  ["/ads", "Media buying"],
-  ["/orders", "Order cards"],
-  ["/assets", "Assets"],
-  ["/products", "Products"],
-  ["/brands", "Brands"],
-  ["/settings", "Settings"],
+type Room = { key: string; label: string; what: string; pages: [string, string][] };
+
+/** The agency: 4 rooms + a small Library. Old routes all still work — they just live inside a room now. */
+export const ROOMS: Room[] = [
+  { key: "home", label: "Home", what: "", pages: [["/", "Home"]] },
+  {
+    key: "studio",
+    label: "Studio",
+    what: "Everything that gets posted: this week, all pieces, the plan and the period review.",
+    pages: [
+      ["/week", "This week"],
+      ["/content", "All pieces"],
+      ["/plan", "Plan"],
+      ["/session", "Period review"],
+    ],
+  },
+  {
+    key: "strategy",
+    label: "Strategy",
+    what: "What we know and what we stand for: research and the brand book.",
+    pages: [
+      ["/research", "Research"],
+      ["/doctrine", "Brand book"],
+    ],
+  },
+  {
+    key: "growth",
+    label: "Growth",
+    what: "Reach and sales: media buying, reports and order cards.",
+    pages: [
+      ["/ads", "Media buying"],
+      ["/orders", "Order cards"],
+    ],
+  },
 ];
+
+export const LIBRARY: Room = {
+  key: "library",
+  label: "Library",
+  what: "Your files and settings: assets, products, brands.",
+  pages: [
+    ["/assets", "Assets"],
+    ["/products", "Products"],
+    ["/brands", "Brands"],
+    ["/settings", "Settings"],
+  ],
+};
+
+const matches = (route: string, href: string) => (href === "/" ? route === "/" : route === href || route.startsWith(href + "/"));
+export function roomOf(route: string): Room {
+  return [...ROOMS, LIBRARY].find((r) => r.pages.some(([h]) => matches(route, h))) ?? ROOMS[0];
+}
 
 function Shell({ children }: { children: ReactNode }) {
   const route = useRoute();
   const { brand, brands, email, refresh } = useBrand();
-  const [open, setOpen] = useState(false);
+  const room = roomOf(route);
   const manager = brand.settings?.manager ?? "claude";
 
   const toggleManager = async () => {
@@ -66,92 +103,101 @@ function Shell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[210px_1fr]">
-      <aside className="border-b border-rule md:sticky md:top-0 md:h-screen md:border-b-0 md:border-r">
-        <div className="flex items-center justify-between px-5 py-5">
+    <div className="min-h-screen pb-20 md:pb-0">
+      {/* top bar */}
+      <header className="sticky top-0 z-20 border-b border-rule bg-ash/95 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3 md:px-8">
           <a href="#/" className="wide text-lg font-bold tracking-wide">
             TEMP. HQ
           </a>
-          <button className="text-concrete md:hidden" onClick={() => setOpen(!open)} aria-expanded={open}>
-            Menu
-          </button>
+          <nav className="hidden items-center gap-1 md:flex" aria-label="Rooms">
+            {ROOMS.map((r) => (
+              <a
+                key={r.key}
+                href={`#${r.pages[0][0]}`}
+                className={`rounded-ctl px-3 py-1.5 text-sm ${room.key === r.key ? "bg-rule text-plaster" : "text-concrete hover:text-plaster"}`}
+              >
+                {r.label}
+              </a>
+            ))}
+          </nav>
+          <div className="ml-auto flex items-center gap-3 text-sm">
+            {brands.length > 1 && (
+              <select
+                aria-label="Brand"
+                className="w-auto py-1"
+                value={brand.id}
+                onChange={async (e) => {
+                  setActiveBrand(e.target.value);
+                  await refresh();
+                }}
+              >
+                {brands.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <a
+              href="#/assets"
+              title="Library: assets, products, brands, settings"
+              className={`rounded-ctl border px-3 py-1.5 ${room.key === "library" ? "border-concrete text-plaster" : "border-rule text-concrete hover:text-plaster"}`}
+            >
+              Library
+            </a>
+          </div>
         </div>
-        <nav className={`${open ? "block" : "hidden"} px-3 pb-4 md:block`}>
-          {NAV.map(([href, label]) => {
-            const active = href === "/" ? route === "/" : route.startsWith(href);
-            return (
+        {room.pages.length > 1 && (
+          <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 pb-2 md:px-8" role="tablist" aria-label={room.label}>
+            {room.pages.map(([href, label]) => (
               <a
                 key={href}
                 href={`#${href}`}
-                onClick={() => setOpen(false)}
-                className={`block rounded-ctl px-3 py-2 text-sm ${active ? "bg-rule text-plaster" : "text-concrete hover:text-plaster"}`}
+                role="tab"
+                aria-selected={matches(route, href)}
+                className={`whitespace-nowrap border-b-2 px-3 py-1.5 text-sm ${matches(route, href) ? "border-ultra text-plaster" : "border-transparent text-concrete hover:text-plaster"}`}
               >
                 {label}
               </a>
-            );
-          })}
-          <div className="mt-6 px-3 text-xs text-concrete">
-            <p className="truncate">@{email}</p>
-            <a className="mt-1 block hover:text-plaster" href={repoUrl()} target="_blank" rel="noreferrer">
-              Data on GitHub
-            </a>
-            <button
-              className="mt-1 hover:text-plaster"
-              onClick={() => {
-                signOut();
-                window.location.reload();
-              }}
-            >
-              Log out
-            </button>
+            ))}
           </div>
-        </nav>
-      </aside>
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-rule px-6 py-3 text-sm">
-          {brands.length > 1 ? (
-            <select
-              aria-label="Brand"
-              className="w-auto py-1"
-              value={brand.id}
-              onChange={async (e) => {
-                setActiveBrand(e.target.value);
-                await refresh();
-              }}
-            >
-              {brands.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <span className="wide font-semibold">{brand.name}</span>
-          )}
-          <div className="flex items-center gap-2" aria-label="AI team">
-            <Node role="Manager" name={manager === "claude" ? "Claude" : "ChatGPT"} lit={manager === "claude"} />
-            <span aria-hidden className="text-rule">—</span>
-            <Node role="Writer" name="ChatGPT" />
-            <span aria-hidden className="text-rule">—</span>
-            <Node role="Visuals" name="Flow · ChatGPT images" />
-          </div>
-          <label className="mb-0 ml-auto flex cursor-pointer items-center gap-2 text-sm text-plaster">
-            <input type="checkbox" checked={manager === "chatgpt"} onChange={toggleManager} />
-            Claude at its limit — send manager work to ChatGPT
-          </label>
-        </div>
-        <main className="mx-auto max-w-6xl px-4 py-8 md:px-8">{children}</main>
-      </div>
-    </div>
-  );
-}
+        )}
+      </header>
 
-function Node({ role, name, lit }: { role: string; name: string; lit?: boolean }) {
-  return (
-    <span className={`rounded-ctl border px-2 py-1 ${lit ? "border-ultra" : "border-rule"}`}>
-      <span className="text-concrete">{role}: </span>
-      <span className="text-plaster">{name}</span>
-    </span>
+      <main className="mx-auto max-w-6xl px-4 py-8 md:px-8">
+        {room.what && <p className="mb-5 text-sm text-concrete">{room.what}</p>}
+        {children}
+        <footer className="mt-16 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-rule pt-4 text-xs text-concrete">
+          <span>@{email}</span>
+          <label className="mb-0 flex cursor-pointer items-center gap-2">
+            <input type="checkbox" checked={manager === "chatgpt"} onChange={toggleManager} />
+            Claude at its limit — give the Director's work to ChatGPT
+          </label>
+          <a className="hover:text-plaster" href={repoUrl()} target="_blank" rel="noreferrer">
+            Data on GitHub
+          </a>
+          <button
+            className="hover:text-plaster"
+            onClick={() => {
+              signOut();
+              window.location.reload();
+            }}
+          >
+            Log out
+          </button>
+        </footer>
+      </main>
+
+      {/* phone: rooms at the bottom */}
+      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-rule bg-ash md:hidden" aria-label="Rooms">
+        {ROOMS.map((r) => (
+          <a key={r.key} href={`#${r.pages[0][0]}`} className={`py-3 text-center text-sm ${room.key === r.key ? "text-plaster" : "text-concrete"}`}>
+            {r.label}
+          </a>
+        ))}
+      </nav>
+    </div>
   );
 }
 
@@ -282,7 +328,7 @@ export default function App() {
       case "/products": return <ProductsPage />;
       case "/brands": return <BrandsPage />;
       case "/settings": return <SettingsPage />;
-      default: return <Overview />;
+      default: return <Home />;
     }
   })();
 
