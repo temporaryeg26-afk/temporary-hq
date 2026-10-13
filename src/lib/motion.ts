@@ -5,7 +5,7 @@
  * Used live (preview with sound) and for recording each slide to MP4.
  */
 
-export type TemplateId = "cinematic" | "spin" | "cards" | "editorial" | "hud";
+export type TemplateId = "cinematic" | "spin" | "cards" | "editorial" | "hud" | "split" | "receipt" | "blueprint" | "marquee" | "film";
 export type MotionSlide = { ar: string; en: string; seconds: number; index: number; total: number; kind?: "cover" | "check" | "end" | "plain"; template?: TemplateId };
 
 /** Motion templates (styles inspired by popular motion-graphic carousel formats; original designs). */
@@ -15,8 +15,15 @@ export const TEMPLATES: { id: TemplateId; name: string; desc: string }[] = [
   { id: "cards", name: "3D cards", desc: "Tilted cards floating in depth behind the text." },
   { id: "editorial", name: "Editorial", desc: "Cream paper, black type, big serif, a red band — magazine feel." },
   { id: "hud", name: "Camera HUD", desc: "Viewfinder frame, crosshair and grid — 'inspect before you pay'." },
+  { id: "split", name: "Versus split", desc: "Screen split by a moving red seam, A vs B — perfect for comparisons." },
+  { id: "receipt", name: "Receipt", desc: "A paper receipt prints line by line behind the text — 'what are you paying for?'." },
+  { id: "blueprint", name: "Tech-pack blueprint", desc: "Deep blue drafting grid, garment outline and measurement arrows." },
+  { id: "marquee", name: "Kinetic marquee", desc: "Huge outlined words racing across in opposite directions." },
+  { id: "film", name: "Film strip", desc: "Sprocket film frames rolling past, warm grade — archive feel." },
 ];
 const EDITORIAL = { bg: "#ECE6DC", ink: "#121110", dim: "#6F6961", accent: "#D13A2F", plate: "#ECE6DC" };
+const BLUEPRINT = { bg: "#0D1B2E", ink: "#EAF0F7", dim: "#7E93AE", accent: "#E5574D", plate: "#EDE7DD" };
+const FILM = { bg: "#120E0B", ink: "#F3E9DA", dim: "#8C7B66", accent: "#E5574D", plate: "#EDE7DD" };
 
 export const BPM_DEFAULT = 110;
 const AR = '"IBM Plex Sans Arabic"';
@@ -104,8 +111,8 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
   const pad = W * 0.08;
   const cover = s.kind === "cover";
   const T: TemplateId = s.template ?? "cinematic";
-  const P = T === "editorial" ? EDITORIAL : PALETTE;
-  const INK = T === "editorial" ? "18,17,16" : "241,236,228";
+  const P = T === "editorial" ? EDITORIAL : T === "blueprint" ? BLUEPRINT : T === "film" ? FILM : PALETTE;
+  const INK = T === "editorial" ? "18,17,16" : T === "blueprint" ? "234,240,247" : "241,236,228";
 
   ctx.save();
   // ---------- camera: impact shake + slow push-in
@@ -118,7 +125,7 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
   // ---------- background
   ctx.fillStyle = P.bg;
   ctx.fillRect(-W * 0.1, -H * 0.1, W * 1.2, H * 1.2);
-  if (T === "cinematic" || T === "spin" || T === "cards") {
+  if (T === "cinematic" || T === "spin" || T === "cards" || T === "marquee" || T === "split") {
     // moving red light leak
     const lx = W * (0.75 - 0.5 * clamp(time / dur)), ly = H * (0.25 + 0.1 * Math.sin(time * 0.8));
     const leak = ctx.createRadialGradient(lx, ly, 0, lx, ly, W * 0.75);
@@ -238,6 +245,112 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
     ctx.fillStyle = P.accent;
     ctx.textAlign = "left";
     ctx.fillText("INSPECTING…  GSM · PRINT · SEAMS · SIZE", fx, fy - W * 0.015);
+  }
+  if (T === "split") {
+    // two halves divided by a moving diagonal red seam
+    const sx = W * (0.5 + 0.08 * Math.sin(time * 0.9)) , tilt = W * 0.18;
+    const open = easeOut(pIn);
+    ctx.fillStyle = "rgba(255,255,255,0.045)";
+    ctx.beginPath();
+    ctx.moveTo(sx + tilt * open, 0); ctx.lineTo(W * 1.2, 0); ctx.lineTo(W * 1.2, H); ctx.lineTo(sx - tilt * open, H); ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = P.accent; ctx.lineWidth = 4 + 3 * onBeat;
+    ctx.beginPath(); ctx.moveTo(sx + tilt * open, -10); ctx.lineTo(sx - tilt * open, H + 10); ctx.stroke();
+    ctx.font = `800 ${Math.round(W * 0.2)}px ${EN}`;
+    ctx.textAlign = "center";
+    ctx.fillStyle = `rgba(${INK},0.07)`;
+    ctx.fillText("A", W * 0.22, H * 0.86);
+    ctx.fillText("B", W * 0.8, H * 0.86);
+    ctx.font = `800 ${Math.round(W * 0.05)}px ${EN}`;
+    ctx.fillStyle = P.accent;
+    ctx.fillText("VS", sx, H * 0.16 + 6 * onBeat);
+  }
+  if (T === "receipt") {
+    // a paper receipt printing line by line, slightly rotated, behind the text
+    const rw = W * 0.56, rx = W * 0.22;
+    const printed = clamp(time / (dur * 0.8));
+    const rh = H * 0.9 * easeOut(printed);
+    ctx.save();
+    ctx.translate(W / 2, 0); ctx.rotate(-0.06); ctx.translate(-W / 2, 0);
+    ctx.fillStyle = "rgba(237,231,221,0.13)";
+    ctx.fillRect(rx, H * 0.05, rw, rh);
+    ctx.font = `500 ${Math.round(W * 0.022)}px ${EN}`;
+    ctx.textAlign = "left";
+    const items = ["FABRIC ........ ?", "GSM ........... ?", "PRINT ......... ?", "STITCHING ..... ?", "SIZE (CM) ..... ?", "RETURNS ....... ?", "BRAND NAME .... ✕", "HYPE .......... ✕", "———————————————", "TOTAL ..... YOU DECIDE"];
+    items.forEach((it, i) => {
+      const y = H * 0.1 + i * H * 0.075;
+      if (y < H * 0.05 + rh - 10) { ctx.fillStyle = `rgba(${INK},${i > 5 && i < 8 ? 0.34 : 0.26})`; ctx.fillText(it, rx + W * 0.04, y); }
+    });
+    // zig-zag torn edge
+    ctx.fillStyle = P.bg;
+    ctx.beginPath();
+    const ey = H * 0.05 + rh;
+    for (let x = rx; x <= rx + rw; x += 16) ctx.lineTo(x, ey + ((x - rx) / 16) % 2 * 10);
+    ctx.lineTo(rx + rw, ey + 30); ctx.lineTo(rx, ey + 30); ctx.fill();
+    ctx.restore();
+  }
+  if (T === "blueprint") {
+    ctx.strokeStyle = `rgba(${INK},0.07)`;
+    ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += W / 24) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y < H; y += W / 24) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    // garment outline drawing itself
+    const g = (px: number, py: number): [number, number] => [W * px, H * py];
+    const pts = [g(0.36, 0.2), g(0.44, 0.22), g(0.5, 0.25), g(0.56, 0.22), g(0.64, 0.2), g(0.8, 0.3), g(0.74, 0.38), g(0.66, 0.34), g(0.66, 0.78), g(0.34, 0.78), g(0.34, 0.34), g(0.26, 0.38), g(0.2, 0.3), g(0.36, 0.2)];
+    const draw = easeInOut(clamp(time / (dur * 0.7))) * (pts.length - 1);
+    ctx.strokeStyle = `rgba(${INK},0.28)`;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 6]);
+    ctx.beginPath(); ctx.moveTo(...pts[0]);
+    for (let i = 1; i <= Math.floor(draw); i++) ctx.lineTo(...pts[i]);
+    const f = draw % 1, i0 = Math.floor(draw);
+    if (i0 < pts.length - 1) ctx.lineTo(pts[i0][0] + (pts[i0 + 1][0] - pts[i0][0]) * f, pts[i0][1] + (pts[i0 + 1][1] - pts[i0][1]) * f);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // measurement arrows
+    ctx.strokeStyle = P.accent; ctx.fillStyle = P.accent; ctx.lineWidth = 2;
+    const m = easeOut(clamp((time - 0.6) / 1));
+    const ay = H * 0.83;
+    ctx.beginPath(); ctx.moveTo(W * 0.5 - W * 0.16 * m, ay); ctx.lineTo(W * 0.5 + W * 0.16 * m, ay); ctx.stroke();
+    ctx.font = `600 ${Math.round(W * 0.02)}px ${EN}`; ctx.textAlign = "center";
+    if (m > 0.9) ctx.fillText("CHEST  ·  ? CM", W * 0.5, ay - 10);
+    ctx.textAlign = "left"; ctx.fillStyle = `rgba(${INK},0.4)`;
+    ctx.fillText("TECH PACK — TMP/ARCHIVE", W * 0.08, H * 0.9);
+  }
+  if (T === "marquee") {
+    ctx.font = `800 ${Math.round(W * 0.16)}px ${EN}`;
+    ctx.textAlign = "left";
+    ctx.lineWidth = 2;
+    const phrase = "KNOW BEFORE YOU PAY — EVERYTHING IS TEMPORARY — ";
+    const pw = ctx.measureText(phrase).width;
+    for (let k = 0; k < 6; k++) {
+      const dir = k % 2 ? 1 : -1;
+      const off = ((time * W * 0.25 * dir + k * 400) % pw + pw) % pw;
+      const y = H * (0.14 + k * 0.155);
+      ctx.strokeStyle = k === 2 ? `rgba(229,87,77,${0.25 + 0.2 * onBeat})` : `rgba(${INK},0.09)`;
+      ctx.strokeText(phrase + phrase, -off, y);
+    }
+  }
+  if (T === "film") {
+    // sprocket film strip rolling vertically on both sides + warm grade
+    const fw = W * 0.12;
+    const roll = (time * H * 0.18) % (H * 0.2);
+    for (const x0 of [0, W - fw]) {
+      ctx.fillStyle = "rgba(0,0,0,0.55)";
+      ctx.fillRect(x0, 0, fw, H);
+      for (let y = -H * 0.2 + roll; y < H; y += H * 0.2) {
+        ctx.fillStyle = `rgba(${INK},0.07)`;
+        ctx.fillRect(x0 + fw * 0.2, y + H * 0.02, fw * 0.6, H * 0.16);
+        ctx.fillStyle = `rgba(${INK},0.25)`;
+        for (let h = 0; h < 4; h++) ctx.fillRect(x0 + fw * 0.06, y + h * H * 0.05, fw * 0.08, H * 0.022);
+        for (let h = 0; h < 4; h++) ctx.fillRect(x0 + fw * 0.86, y + h * H * 0.05, fw * 0.08, H * 0.022);
+      }
+    }
+    const warm = ctx.createLinearGradient(0, 0, W, H);
+    warm.addColorStop(0, "rgba(214,140,60,0.10)"); warm.addColorStop(1, "rgba(120,40,30,0.10)");
+    ctx.fillStyle = warm; ctx.fillRect(0, 0, W, H);
+    ctx.font = `600 ${Math.round(W * 0.018)}px ${EN}`; ctx.fillStyle = `rgba(${INK},0.45)`; ctx.textAlign = "left";
+    ctx.fillText(`ARCHIVE ${String(s.index + 1).padStart(3, "0")}  ·  KODAK-ISH 400`, W * 0.15, H * 0.9);
   }
   // vignette + grain + flicker
   const v = ctx.createRadialGradient(W / 2, H * 0.45, W * 0.25, W / 2, H / 2, W * 0.95);

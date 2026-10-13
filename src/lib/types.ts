@@ -13,6 +13,8 @@ export type BrandSettings = {
   period_days?: number;
   /** How many days ahead the team produces in full detail (7 or 14). */
   detail_days?: number;
+  /** Unit economics for the Performance page (internal — never in content). */
+  unit_economics?: import("./performance").UE;
 };
 
 export type Brand = {
