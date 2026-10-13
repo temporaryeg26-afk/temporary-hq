@@ -7,8 +7,8 @@ import { downloadFile } from "../lib/github";
 import { rewritePartPack } from "../lib/packs";
 import { list } from "../lib/store";
 import type { ContentItem, Media } from "../lib/types";
-import { drawMotion, logoBoxFor, motionFonts, startBeat, TEMPLATES } from "../lib/motion";
-import { renderPiece } from "../lib/render";
+import { drawMotion, logoBoxFor, motionFonts, startScore, TEMPLATES } from "../lib/motion";
+import { founderImage, renderPiece } from "../lib/render";
 
 const FLOW = "https://labs.google/fx/tools/flow";
 const words = (s: string) => (s ?? "").trim().split(/\s+/).filter(Boolean).length;
@@ -353,7 +353,7 @@ export function MotionPage({ id }: { id: string }) {
 
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
         <div>
-          {s && <MotionCanvas slide={s} index={cur} total={slides.length} bpm={Number(o.bpm) || 110} playing={playing} template={o.template || "cinematic"} />}
+          {s && <MotionCanvas slide={s} index={cur} total={slides.length} bpm={Number(o.bpm) || 110} playing={playing} template={o.template || "luxury"} />}
           <div className="mt-4">
             <p className="text-xs uppercase tracking-wide text-concrete">Template</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -361,7 +361,7 @@ export function MotionPage({ id }: { id: string }) {
                 <button
                   key={t.id}
                   onClick={() => { setO({ ...o, template: t.id }); setDirty(true); setPlaying(false); }}
-                  className={`rounded-panel border px-3 py-2 text-left text-xs ${(o.template || "cinematic") === t.id ? "border-ink bg-ink text-white" : "border-rule hover:border-ink"}`}
+                  className={`rounded-panel border px-3 py-2 text-left text-xs ${(o.template || "luxury") === t.id ? "border-ink bg-ink text-white" : "border-rule hover:border-ink"}`}
                 >
                   <span className="block font-semibold">{t.name}</span>
                   <span className="block opacity-70">{t.desc}</span>
@@ -382,7 +382,7 @@ export function MotionPage({ id }: { id: string }) {
                     setRendering(null);
                     setErr(null);
                     await reload();
-                    alert(`Rendered ${n} slide${n === 1 ? "" : "s"} with the ${(o?.template ?? "cinematic")} template.`);
+                    alert(`Rendered ${n} slide${n === 1 ? "" : "s"} with the ${(o?.template ?? "luxury")} template.`);
                   } catch (e) {
                     setRendering(null);
                     setErr((e as Error).message);
@@ -505,6 +505,11 @@ export function MotionPage({ id }: { id: string }) {
 /** Live canvas preview of one motion slide, with our beat while playing. */
 function MotionCanvas({ slide, index, total, bpm, playing, template }: { slide: any; index: number; total: number; bpm: number; playing: boolean; template: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const { brand } = useBrand();
+  const [founder, setFounder] = useState<ImageBitmap | null>(null);
+  useEffect(() => {
+    founderImage(brand.id).then(setFounder).catch(() => setFounder(null));
+  }, [brand.id]);
   useEffect(() => {
     const c = ref.current;
     if (!c) return;
@@ -512,7 +517,7 @@ function MotionCanvas({ slide, index, total, bpm, playing, template }: { slide: 
     const seconds = Number(slide.seconds) || 5;
     const kind = index === 0 ? "cover" : index === total - 1 ? "end" : /check|اسأل|\d/.test(slide.copy ?? "") ? "check" : "plain";
     const s = { ar: String(slide.copy ?? ""), en: String(slide.copy_en ?? ""), seconds, index, total, kind, template } as const;
-    const box = logoBoxFor(c.width, c.height, 1);
+    const box = logoBoxFor(c.width, c.height, 1, template as any);
     let raf = 0;
     let ac: AudioContext | null = null;
     let stop: (() => void) | null = null;
@@ -522,11 +527,11 @@ function MotionCanvas({ slide, index, total, bpm, playing, template }: { slide: 
       const t0 = performance.now();
       if (playing) {
         ac = new AudioContext();
-        stop = startBeat(ac, ac.destination, bpm, seconds, ac.currentTime + 0.05, { counter: kind === "cover" && /\d/.test(s.en) });
+        stop = startScore(ac, ac.destination, s as any, bpm, ac.currentTime + 0.05);
       }
       const frame = () => {
         const t = playing ? (performance.now() - t0) / 1000 : seconds - 0.6;
-        drawMotion(ctx, c.width, c.height, s as any, t, bpm, box);
+        drawMotion(ctx, c.width, c.height, s as any, t, bpm, box, { founder });
         if (playing && t < seconds) raf = requestAnimationFrame(frame);
       };
       frame();
@@ -537,6 +542,6 @@ function MotionCanvas({ slide, index, total, bpm, playing, template }: { slide: 
       stop?.();
       ac?.close().catch(() => null);
     };
-  }, [slide, index, total, bpm, playing, template]);
+  }, [slide, index, total, bpm, playing, template, founder]);
   return <canvas ref={ref} width={540} height={675} className="w-full rounded-panel border border-rule" aria-label="Motion slide preview" />;
 }
