@@ -24,7 +24,7 @@ export const SUMMARY = [
   "One simple structure: organic content every day + ONE prospecting campaign (boost the best trust post) from week 2 + ONE retargeting campaign once the warm audience passes ~1,000 people. No separate campaign per funnel stage until we have data.",
   "We judge everything on money that reaches the bank: completed (delivered, not returned) orders × contribution margin − ad spend. Likes, followers and platform ROAS are signals, not results.",
   "No discounts. We sell with proof (fabric, print, construction), scarcity that is real (200 pieces, no restock of the same edition) and belonging (FOUNDER / FOUNDER ELITE).",
-  "The #1 blocker: the real unit cost per product. The selling prices and the 'supplier cost' list are the same numbers — if that's true, every sale loses money. Fill the costs in the calculator below before we spend on conversion ads.",
+  "Unit economics (owner, Oct 2026): supplier price = selling price − EGP 200, including DTF + embroidery. So every piece earns ~EGP 200 before label, packaging, fees and refused parcels — about EGP 110–120 contribution per completed order on ANY product. Break-even ROAS is high (≈ 5 on kids tees up to ≈ 14 on the premium hoodie): paid ads must be very efficient, so organic, prepaid orders (fewer COD refusals) and 2-piece orders (higher AOV, same delivery) matter more than ad budget.",
 ];
 
 export const VERIFIED = [
@@ -47,7 +47,6 @@ export const ASSUMPTIONS = [
 ];
 
 export const MISSING = [
-  "Real supplier unit cost per product (CRITICAL — see the warning in the calculator).",
   "Courier contract: what the courier charges us, who pays on a refused COD parcel, COD collection fee.",
   "Paymob live? Which share of orders will be online vs COD.",
   "Return / exchange policy (final wording) and its cost.",
@@ -321,7 +320,7 @@ export const SCORECARD: [string, string][] = [
 ];
 
 export const RISKS = [
-  "Unit cost = selling price (if true) → negative margin; ads would multiply losses.",
+  "Thin unit margin (~EGP 200 per piece before costs) → max CAC ≈ EGP 110–120 per completed order; easy to lose money on cold traffic.",
   "COD refusals (15–35% industry claims) eat contribution — require confirmation before shipping; offer prepaid options.",
   "Small warm audiences → high frequency, ad fatigue.",
   "AI founder: must keep AI-info label on; never claim he's real.",
@@ -330,27 +329,27 @@ export const RISKS = [
 ];
 
 export const NEXT = [
-  "YOU: confirm the real supplier cost for each product (calculator below).",
+  "Raise AOV without discounts: 'complete the look' 2-piece orders (one delivery fee), FOUNDER ELITE path across drops.",
   "YOU: confirm courier charge, who pays refused parcels, and whether Paymob/InstaPay is live.",
   "CLAUDE: add UTM + order ID fields to the order form plan; set up the weekly Google Sheet columns from the dashboard spec.",
   "CLAUDE: run week 1 organic (already scheduled) and log sends+saves ÷ reach per post.",
   "Day 8: pick the winner → first paid test (Media buying page).",
 ];
 
-/** Unit economics. Prices come from the owner's sheet (Oct 2026). Costs are blank until confirmed. */
+/** Unit economics. Prices from the owner's sheet (Oct 2026); supplier price = price − 200, incl. DTF + embroidery (owner confirmed). */
 export type UERow = { name: string; price: number; cost: number | null; emb: boolean; dtf: boolean };
 export type UE = { rows: UERow[]; delivery_fee: number; courier_cost: number; embroidery: number; dtf: number; label: number; packaging: number; pay_pct: number; pay_fixed: number; prepaid_share: number; rto_rate: number };
 export const UE_DEFAULT: UE = {
   rows: [
-    { name: "Regular T-Shirt", price: 900, cost: null, emb: true, dtf: true },
-    { name: "Parasola Oversized", price: 900, cost: null, emb: true, dtf: true },
-    { name: "Regular Long Sleeve", price: 900, cost: null, emb: true, dtf: true },
-    { name: "Boulevard Oversized", price: 1100, cost: null, emb: true, dtf: true },
-    { name: "Standard Oversized Hoodie", price: 1300, cost: null, emb: true, dtf: true },
-    { name: "Premium Oversized Crewneck", price: 1400, cost: null, emb: true, dtf: true },
-    { name: "Premium Oversized Hoodie", price: 1500, cost: null, emb: true, dtf: true },
-    { name: "Kids Regular T-Shirt", price: 600, cost: null, emb: true, dtf: true },
-    { name: "Kids Regular Hoodie", price: 800, cost: null, emb: true, dtf: true },
+    { name: "Regular T-Shirt", price: 900, cost: 700, emb: false, dtf: false },
+    { name: "Parasola Oversized", price: 900, cost: 700, emb: false, dtf: false },
+    { name: "Regular Long Sleeve", price: 900, cost: 700, emb: false, dtf: false },
+    { name: "Boulevard Oversized", price: 1100, cost: 900, emb: false, dtf: false },
+    { name: "Standard Oversized Hoodie", price: 1300, cost: 1100, emb: false, dtf: false },
+    { name: "Premium Oversized Crewneck", price: 1400, cost: 1200, emb: false, dtf: false },
+    { name: "Premium Oversized Hoodie", price: 1500, cost: 1300, emb: false, dtf: false },
+    { name: "Kids Regular T-Shirt", price: 600, cost: 400, emb: false, dtf: false },
+    { name: "Kids Regular Hoodie", price: 800, cost: 600, emb: false, dtf: false },
   ],
   delivery_fee: 90,
   courier_cost: 90,
