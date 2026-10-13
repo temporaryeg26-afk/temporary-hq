@@ -14,7 +14,7 @@ export type RunConfig = {
   language: "bilingual" | "masri" | "english";
   products: string[]; // product codes ([] = brand/trust content only)
   objective: string;
-  package: { static: boolean; carousel: boolean; stories: boolean; reel: boolean };
+  package: { static: boolean; carousel: boolean; stories: boolean; reel: boolean; founder60: boolean };
   writer: "claude" | "chatgpt";
   notes: string;
 };
@@ -24,8 +24,8 @@ export const DEFAULT_RUN: RunConfig = {
   days: 7,
   language: "bilingual",
   products: [],
-  objective: "Trust before launch: get Cairo Gen Z / millennials to stop, watch to the end, save, send and follow.",
-  package: { static: true, carousel: true, stories: true, reel: true },
+  objective: "FOUNDER TRUST: the masked Founder gives real, useful advice and knowledge (how to judge fabric, print, fit, care, styling, value, how to spot fakes and empty hype) so Cairo Gen Z / millennials trust him, save it, send it and follow him.",
+  package: { static: true, carousel: true, stories: true, reel: false, founder60: true },
   writer: "claude",
   notes: "",
 };
@@ -41,6 +41,8 @@ const RULES = `NON-NEGOTIABLE RULES
 - NO invented facts: no fake reviews, sold-out claims, stock numbers, delivery/return policies or manufacturing claims. Only confirmed specs. Talking about OTHER brands' prices use "5,000 EGP" as the example. Never name competitors.
 - Edition truth you MAY use: 200 pieces per design, the same edition is never restocked. FOUNDER = 1 piece from any of the 3 Founder Drops; FOUNDER ELITE = 1 piece from each.
 - FOUNDER character: a masked character made with AI tools. Never claim he is real or filmed live. Never mention AI in captions. Add "ai_label": true on any piece showing him.
+- THE FOUNDER (voice of the brand): masked, calm, confident, generous with knowledge — an insider who tells people what sellers won't. He teaches, he doesn't sell. Consistent look in every video: a man in a black oversized hoodie with a small white "TEMPORARY™" chest print, wearing a sculpted black-and-chrome geometric mask engraved with angular TEMPORARY lettering, silver rings, dark studio light. He speaks Egyptian Arabic (Masri).
+- Founder 60s video = 6 clips × 10s, ONE continuous story: clip 1 = hook (a question or bold statement in his voice), clips 2–5 = one piece of advice each with a visible demonstration, clip 6 = payoff + "تابعني" / "ابعتها لصاحبك". Each clip has its own Flow prompt (same character description every time) + his Masri voiceover line + on-screen text.
 - Posting times (Cairo): carousel 13:00–14:00, static 18:00–19:00, Reel 20:00–21:00, stories 21:00–23:00.`;
 
 const SCHEMA = `ANSWER = ONE JSON object, nothing else:
@@ -50,7 +52,7 @@ const SCHEMA = `ANSWER = ONE JSON object, nothing else:
   "items": [
     {
       "date": "YYYY-MM-DD", "time": "HH:MM",
-      "format": "static" | "motion_carousel" | "story" | "reel",
+      "format": "static" | "motion_carousel" | "story" | "reel" | "founder_video",
       "pillar": "discovery" | "philosophy" | "product" | "community" | "conversion" | "doctrine",
       "product_code": null or a code,
       "title": "short internal title",
@@ -61,6 +63,8 @@ const SCHEMA = `ANSWER = ONE JSON object, nothing else:
       "slides": [{ "copy": "Arabic", "copy_en": "English", "seconds": 5, "visual": "what the motion scene shows (acts out the point; different style per carousel)" }],
       // story (3–5 frames):
       "frames": [{ "text": "Arabic", "text_en": "English", "sticker": "Poll: … / … | Question: … | Link | none" }],
+      // founder_video (exactly 6 clips × 10s = 60s):
+      "clips": [{ "seconds": 10, "voiceover_ar": "what the Founder says (Masri)", "voiceover_en": "English subtitle", "on_screen_text": "short Arabic text", "on_screen_en": "…", "flow_prompt": "full Veo prompt for this 10s clip incl. the Founder's exact look, action, camera, light" }],
       // reel (6–12s):
       "scenes": [{ "seconds": 2, "on_screen_text": "Arabic", "on_screen_en": "English", "visual": "what we see" }], "video_prompt": "Flow/Veo prompt",
       "caption_ar": "Masri caption, line 1 = hook", "caption_en": "English caption",
@@ -72,7 +76,7 @@ const SCHEMA = `ANSWER = ONE JSON object, nothing else:
 }`;
 
 export function weekCommand(cfg: RunConfig, brand: Brand, products: Product[]) {
-  const fmts = [cfg.package.static && "1 static post", cfg.package.carousel && "1 motion carousel", cfg.package.stories && "1 story set", cfg.package.reel && "1 Reel"].filter(Boolean).join(" + ");
+  const fmts = [cfg.package.static && "1 static post", cfg.package.carousel && "1 motion carousel", cfg.package.stories && "1 story set", cfg.package.reel && "1 Reel", cfg.package.founder60 && "1 Founder 60-second video (6 × 10s clips)"].filter(Boolean).join(" + ");
   const prods = cfg.products.length ? products.filter((p) => cfg.products.includes(p.code)).map((p) => `${p.code}: ${p.name}${p.specs ? ` — confirmed specs: ${p.specs}` : ""}`).join("\n") : "No product focus (trust / brand phase).";
   const d = brand.doctrine;
   const head =
@@ -105,7 +109,7 @@ export function parseWeek(text: string): any {
   return j;
 }
 
-const FMT: Record<string, ContentItem["format"]> = { static: "static", image: "static", motion_carousel: "motion_carousel", carousel: "motion_carousel", story: "story", stories: "story", reel: "reel" };
+const FMT: Record<string, ContentItem["format"]> = { static: "static", image: "static", motion_carousel: "motion_carousel", carousel: "motion_carousel", story: "story", stories: "story", reel: "reel", founder_video: "founder_video", founder: "founder_video", video: "founder_video" };
 
 export async function importWeek(brand: Brand, products: Product[], json: any, writer: string) {
   const rows: ContentItem[] = [];
