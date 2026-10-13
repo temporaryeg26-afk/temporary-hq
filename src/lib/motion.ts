@@ -124,7 +124,7 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
     ctx.clip();
     let x = W - pad;
     for (const w of ln) {
-      const delay = 0.15 + wi * (beat / 2.2);
+      const delay = 0.12 + wi * (beat / 3.2);
       const p = easeOut((time - delay) / 0.5);
       const ww = ctx.measureText(w + " ").width;
       ctx.fillStyle = PALETTE.ink;
@@ -140,7 +140,7 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
 
   // ---------- English line: letter-spaced, types on
   const enTop = top + lines.length * lh + size * 0.55;
-  const enDelay = 0.25 + wi * (beat / 2.2);
+  const enDelay = 0.2 + wi * (beat / 3.2);
   const shown = Math.floor(clamp((time - enDelay) / 0.9) * s.en.length);
   ctx.font = `500 ${Math.round(W * 0.034)}px ${EN}`;
   ctx.textAlign = "right";
