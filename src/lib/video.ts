@@ -49,9 +49,10 @@ const XY: Record<Position, string> = {
 export async function overlayVideo(
   video: Blob,
   overlays: { file: Blob; position: Position; widthPct: number }[],
-  onProgress?: (p: number) => void
+  onProgress?: (p: number) => void,
+  opts: { aacAudio?: boolean } = {}
 ): Promise<Blob> {
-  if (!overlays.length) return video;
+  if (!overlays.length && !opts.aacAudio) return video;
   const f = await engine();
   const prog = ({ progress }: { progress: number }) => onProgress?.(Math.max(0, Math.min(1, progress)));
   f.on("progress", prog);
@@ -74,7 +75,7 @@ export async function overlayVideo(
     "-filter_complex", filter.replace(/;$/, ""),
     "-map", last, "-map", "0:a?",
     "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p",
-    "-c:a", "copy", "-movflags", "+faststart",
+    ...(opts.aacAudio ? ["-c:a", "aac", "-b:a", "192k"] : ["-c:a", "copy"]), "-movflags", "+faststart",
     "out.mp4"
   );
   const code = await f.exec(args);

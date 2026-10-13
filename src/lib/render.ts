@@ -9,12 +9,13 @@ import { Aspect, bitmap, composite, SIZES } from "./media";
 import { mutate, newId, now } from "./store";
 import type { ContentItem, Media } from "./types";
 import { overlayVideo } from "./video";
+import { recordSlide } from "./motion";
 
 export type Theme = { bg: string; fg: string; accent: string; muted: string };
 export const DARK: Theme = { bg: "#0E0D0C", fg: "#ECE7DF", accent: "#E5574D", muted: "#8E877E" };
 export const LIGHT: Theme = { bg: "#E9E4DC", fg: "#121110", accent: "#C8372D", muted: "#6F6961" };
 
-export type Frame = { text: string; kicker?: string; index?: number; total?: number; seconds?: number };
+export type Frame = { text: string; en?: string; kicker?: string; index?: number; total?: number; seconds?: number };
 
 const FONT_AR = '"IBM Plex Sans Arabic"';
 const FONT_EN = '"Archivo"';
@@ -203,7 +204,7 @@ export function jobsFor(item: ContentItem): RenderJob[] {
     return slides.map((s, i) => ({
       slot: `slide-${s.n ?? i + 1}`,
       aspect: "4:5" as Aspect,
-      frame: { text: String(s.copy ?? ""), kicker: KICKER, index: i, total: slides.length, seconds: Number(s.seconds) || 5 },
+      frame: { text: String(s.copy ?? ""), en: String(s.copy_en ?? ""), kicker: KICKER, index: i, total: slides.length, seconds: Number(s.seconds) || 5 },
       motion: item.format === "motion_carousel",
     }));
   }
@@ -214,7 +215,8 @@ export function jobsFor(item: ContentItem): RenderJob[] {
   return [];
 }
 
-export const RENDERABLE = ["static", "carousel", "motion_carousel", "story"];
+/** Only motion carousels are designed in code now; posts, carousels and stories are made with ChatGPT images. */
+export const RENDERABLE = ["motion_carousel"];
 
 /** How many of a piece's frames already have a finished design. */
 export function missingJobs(item: ContentItem, media: Media[]): RenderJob[] {
@@ -248,14 +250,18 @@ export async function renderPiece(brandId: string, item: ContentItem, onStep?: (
       await retry(() => uploadFile(path, r.blob, `HQ (${currentLogin()}): design for ${item.title}`), "Saving the image");
       row = { id, content_id: item.id, kind: "image", slot: j.slot, made_with: "HQ renderer", status: r.pass ? "done" : "rejected", storage_path: path, base_path: path, fidelity: { method: "pixel", pass: r.pass, placements: r.placements, checks: r.checks, missing }, note: null, created_by: currentLogin(), created_at: now() };
     } else {
-      onStep?.(`Animating slide ${i + 1}/${jobs.length} (${j.frame.seconds}s — keep this tab in front)…`);
-      const webm = await renderMotion(j.frame, j.aspect, theme, j.frame.seconds ?? 5);
+      onStep?.(`Animating slide ${i + 1}/${jobs.length} with music (${j.frame.seconds}s — keep this tab in front)…`);
+      const logo = { asset_kind: "logo", position: "bottom-right", width_pct: 14 };
+      const lo = (await retry(() => resolveOverlays(brandId, [logo], item.product_id), "Loading your logo")).overlays;
+      const bm = lo[0] ? await bitmap(lo[0].file) : null;
+      const kind = i === 0 ? "cover" : i === jobs.length - 1 && !only ? "end" : /check|اسأل|\d/.test(j.frame.text) ? "check" : "plain";
+      const webm = await recordSlide({ ar: j.frame.text, en: j.frame.en ?? "", seconds: j.frame.seconds ?? 5, index: j.frame.index ?? i, total: j.frame.total ?? jobs.length, kind: kind as any }, 1080, 1350, bm ? bm.width / bm.height : 1);
       onStep?.(`Converting slide ${i + 1}/${jobs.length} to MP4 + logo…`);
-      const mp4 = await overlayVideo(webm, overlays.map((o) => ({ file: o.file, position: o.position, widthPct: o.widthPct })));
+      const mp4 = await overlayVideo(webm, lo.map((o) => ({ file: o.file, position: o.position, widthPct: o.widthPct })), undefined, { aacAudio: true });
       const path = `${brandId}/files/media/${id}.mp4`;
       onStep?.(`Saving slide ${i + 1}/${jobs.length}…`);
       await retry(() => uploadFile(path, mp4, `HQ (${currentLogin()}): motion slide for ${item.title}`), "Saving the video");
-      row = { id, content_id: item.id, kind: "video", slot: j.slot, made_with: "HQ renderer (motion)", status: "done", storage_path: path, base_path: null, fidelity: { method: "overlay", overlays: overlays.length, missing }, note: "Silent video — add music in Instagram when posting.", created_by: currentLogin(), created_at: now() };
+      row = { id, content_id: item.id, kind: "video", slot: j.slot, made_with: "HQ renderer (motion)", status: "done", storage_path: path, base_path: null, fidelity: { method: "overlay", overlays: overlays.length, missing }, note: "Motion slide with our original beat (royalty-free).", created_by: currentLogin(), created_at: now() };
     }
     await retry(
       () => mutate<Media>(brandId, "media", (d) => [...d.map((m) => (m.content_id === item.id && m.slot === row.slot && m.status === "done" ? { ...m, status: "rejected" as const } : m)), row], `design ${row.slot} for ${item.title}`),
