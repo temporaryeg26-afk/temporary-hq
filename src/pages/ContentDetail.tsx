@@ -271,7 +271,7 @@ function SlotCard({ slot, item, media, onChange }: { slot: Slot; item: ContentIt
   const prompt = slot.kind === "video" ? videoPromptFor(slot.prompt) : imagePromptFor(slot.prompt, slot.aspect);
   const overlaysSpec = item.output?.overlays ?? [{ asset_kind: "logo", position: slot.aspect === "9:16" ? "top-right" : "bottom-right", width_pct: 14 }];
 
-  const upload = async (file: File | undefined) => {
+  const upload = async (file: File | undefined, via?: string) => {
     if (!file) return;
     setBusy(true);
     setErr(null);
@@ -288,7 +288,7 @@ function SlotCard({ slot, item, media, onChange }: { slot: Slot; item: ContentIt
             content_id: item.id,
             kind: "image",
             slot: slot.key,
-            made_with: madeWith,
+            made_with: via ?? madeWith,
             status: r.pass ? "done" : "rejected",
             storage_path: path,
             base_path: path,
@@ -308,7 +308,7 @@ function SlotCard({ slot, item, media, onChange }: { slot: Slot; item: ContentIt
             content_id: item.id,
             kind: "video",
             slot: slot.key,
-            made_with: madeWith,
+            made_with: via ?? madeWith,
             status: "done",
             storage_path: path,
             fidelity: { method: "overlay", overlays: overlays.length, missing },
@@ -370,6 +370,24 @@ function SlotCard({ slot, item, media, onChange }: { slot: Slot; item: ContentIt
           <input type="file" className="hidden" disabled={busy} accept={slot.kind === "video" ? "video/mp4,video/quicktime" : "image/png,image/jpeg,image/webp"} onChange={(e) => upload(e.target.files?.[0])} />
         </label>
       </div>
+      {slot.kind === "image" && (
+        <div
+          tabIndex={0}
+          role="button"
+          aria-label={`Paste image for ${slot.label}`}
+          onPaste={(e) => {
+            const f = [...e.clipboardData.files].find((x) => x.type.startsWith("image/"));
+            if (f) {
+              e.preventDefault();
+              setMadeWith("ChatGPT image");
+              upload(f, "ChatGPT image");
+            } else setErr("No image on the clipboard. In ChatGPT, use the copy button under the image, then click here and press Ctrl+V.");
+          }}
+          className="mt-3 cursor-text rounded-ctl border border-dashed border-rule px-3 py-2 text-sm text-concrete focus:border-ultra focus:outline-none"
+        >
+          Or click here and press Ctrl+V to paste an image copied from ChatGPT
+        </div>
+      )}
       {progress && <p className="mt-2 text-sm text-concrete">{progress}</p>}
       <ErrorNote msg={err} />
       {media.length > 0 && (
