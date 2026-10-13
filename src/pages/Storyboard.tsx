@@ -483,7 +483,7 @@ function MotionCanvas({ slide, index, total, bpm, playing }: { slide: any; index
         stop = startBeat(ac, ac.destination, bpm, seconds);
       }
       const frame = () => {
-        const t = playing ? (performance.now() - t0) / 1000 : Math.min(seconds - 0.6, 2.6);
+        const t = playing ? (performance.now() - t0) / 1000 : seconds - 0.6;
         drawMotion(ctx, c.width, c.height, s as any, t, bpm, box);
         if (playing && t < seconds) raf = requestAnimationFrame(frame);
       };
