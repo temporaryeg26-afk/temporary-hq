@@ -5,11 +5,23 @@
  * Used live (preview with sound) and for recording each slide to MP4.
  */
 
-export type MotionSlide = { ar: string; en: string; seconds: number; index: number; total: number; kind?: "cover" | "check" | "end" | "plain" };
+export type TemplateId = "cinematic" | "spin" | "cards" | "editorial" | "hud";
+export type MotionSlide = { ar: string; en: string; seconds: number; index: number; total: number; kind?: "cover" | "check" | "end" | "plain"; template?: TemplateId };
+
+/** Motion templates (styles inspired by popular motion-graphic carousel formats; original designs). */
+export const TEMPLATES: { id: TemplateId; name: string; desc: string }[] = [
+  { id: "cinematic", name: "Cinematic thread", desc: "Black, red light leak, word slams, a red thread that runs across all slides." },
+  { id: "spin", name: "Text spin", desc: "A giant ring of words rotating behind the headline." },
+  { id: "cards", name: "3D cards", desc: "Tilted cards floating in depth behind the text." },
+  { id: "editorial", name: "Editorial", desc: "Cream paper, black type, big serif, a red band — magazine feel." },
+  { id: "hud", name: "Camera HUD", desc: "Viewfinder frame, crosshair and grid — 'inspect before you pay'." },
+];
+const EDITORIAL = { bg: "#ECE6DC", ink: "#121110", dim: "#6F6961", accent: "#D13A2F", plate: "#ECE6DC" };
 
 export const BPM_DEFAULT = 110;
 const AR = '"IBM Plex Sans Arabic"';
 const EN = '"Archivo"';
+const SERIF = '"Instrument Serif"';
 
 export const PALETTE = { bg: "#090909", ink: "#F1ECE4", dim: "#7C766E", accent: "#E5574D", plate: "#EDE7DD" };
 
@@ -19,6 +31,7 @@ export async function motionFonts() {
     document.fonts.load(`500 40px ${AR}`),
     document.fonts.load(`800 60px ${EN}`),
     document.fonts.load(`500 30px ${EN}`),
+    document.fonts.load(`italic 400 60px ${SERIF}`),
   ]).catch(() => null);
 }
 
@@ -90,6 +103,9 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
   const impact = 1 - clamp(time / 0.35); // the hit at the start of every slide
   const pad = W * 0.08;
   const cover = s.kind === "cover";
+  const T: TemplateId = s.template ?? "cinematic";
+  const P = T === "editorial" ? EDITORIAL : PALETTE;
+  const INK = T === "editorial" ? "18,17,16" : "241,236,228";
 
   ctx.save();
   // ---------- camera: impact shake + slow push-in
@@ -100,42 +116,144 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
   ctx.translate(-W / 2, -H / 2);
 
   // ---------- background
-  ctx.fillStyle = PALETTE.bg;
+  ctx.fillStyle = P.bg;
   ctx.fillRect(-W * 0.1, -H * 0.1, W * 1.2, H * 1.2);
-  // moving red light leak
-  const lx = W * (0.75 - 0.5 * clamp(time / dur)), ly = H * (0.25 + 0.1 * Math.sin(time * 0.8));
-  const leak = ctx.createRadialGradient(lx, ly, 0, lx, ly, W * 0.75);
-  leak.addColorStop(0, `rgba(229,87,77,${0.22 + 0.1 * onBeat})`);
-  leak.addColorStop(0.5, "rgba(229,87,77,0.05)");
-  leak.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = leak;
-  ctx.fillRect(0, 0, W, H);
-  // fabric threads: thin waving lines
-  ctx.strokeStyle = "rgba(241,236,228,0.05)";
-  ctx.lineWidth = 1.5;
-  for (let k = 0; k < 9; k++) {
-    ctx.beginPath();
-    for (let x = 0; x <= W; x += 24) {
-      const y = H * (0.1 + k * 0.1) + Math.sin(x * 0.01 + time * 1.4 + k) * 14;
-      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  if (T === "cinematic" || T === "spin" || T === "cards") {
+    // moving red light leak
+    const lx = W * (0.75 - 0.5 * clamp(time / dur)), ly = H * (0.25 + 0.1 * Math.sin(time * 0.8));
+    const leak = ctx.createRadialGradient(lx, ly, 0, lx, ly, W * 0.75);
+    leak.addColorStop(0, `rgba(229,87,77,${0.22 + 0.1 * onBeat})`);
+    leak.addColorStop(0.5, "rgba(229,87,77,0.05)");
+    leak.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = leak;
+    ctx.fillRect(0, 0, W, H);
+  }
+  if (T === "cinematic") {
+    ctx.strokeStyle = `rgba(${INK},0.05)`;
+    ctx.lineWidth = 1.5;
+    for (let k = 0; k < 9; k++) {
+      ctx.beginPath();
+      for (let x = 0; x <= W; x += 24) {
+        const y = H * (0.1 + k * 0.1) + Math.sin(x * 0.01 + time * 1.4 + k) * 14;
+        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
     }
+  }
+  if (T === "spin") {
+    // giant rotating ring of words
+    const words = (s.en + " · " + s.ar + " · ").repeat(3);
+    ctx.save();
+    ctx.translate(W * 0.5, H * 0.47);
+    ctx.rotate(time * 0.35 + s.index * 0.6);
+    ctx.font = `800 ${Math.round(W * 0.045)}px ${EN}`;
+    ctx.fillStyle = `rgba(${INK},0.13)`;
+    ctx.textAlign = "center";
+    const n = Math.min(120, words.length);
+    for (let ring = 0; ring < 2; ring++) {
+      const rad = W * (0.46 - ring * 0.12);
+      for (let i = 0; i < n; i++) {
+        ctx.save();
+        ctx.rotate((i / n) * Math.PI * 2 * (ring ? -1 : 1));
+        ctx.fillText(words[i], 0, -rad);
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  }
+  if (T === "cards") {
+    // three tilted cards floating in depth
+    for (let k = 0; k < 3; k++) {
+      const depth = 1 - k * 0.18;
+      const ang = (-0.18 + k * 0.17) + Math.sin(time * 0.9 + k) * 0.04;
+      const cx = W * (0.32 + k * 0.2) + Math.sin(time * 0.7 + k * 2) * W * 0.02;
+      const cy = H * (0.46 + (k - 1) * 0.05) + Math.cos(time * 0.8 + k) * H * 0.015;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(ang);
+      ctx.scale(depth * (0.92 + 0.08 * Math.cos(time + k)), depth);
+      ctx.shadowColor = "rgba(0,0,0,0.6)";
+      ctx.shadowBlur = 40;
+      ctx.fillStyle = k === 1 ? "rgba(229,87,77,0.20)" : `rgba(${INK},0.06)`;
+      roundRect(ctx, -W * 0.22, -H * 0.2, W * 0.44, H * 0.4, W * 0.03);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = `rgba(${INK},0.18)`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+  if (T === "editorial") {
+    // magazine bands
+    ctx.fillStyle = P.ink;
+    ctx.fillRect(0, 0, W, H * 0.02);
+    ctx.fillStyle = P.accent;
+    const bandH = H * 0.1 * easeOut(pIn);
+    ctx.fillRect(0, H - bandH, W, bandH);
+    ctx.font = `italic 400 ${Math.round(W * 0.22)}px ${SERIF}`;
+    ctx.fillStyle = `rgba(${INK},0.06)`;
+    ctx.textAlign = "left";
+    ctx.fillText("Temporary.", -W * 0.03 + time * 5, H * 0.95);
+  }
+  if (T === "hud") {
+    // grid + viewfinder + crosshair
+    ctx.strokeStyle = `rgba(${INK},0.05)`;
+    ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += W / 12) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    for (let y = 0; y < H; y += W / 12) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+    const fx = W * 0.16, fy = H * 0.2, fw = W * 0.68, fh = H * 0.52;
+    ctx.strokeStyle = `rgba(${INK},${0.35 + 0.25 * onBeat})`;
+    ctx.lineWidth = 2;
+    const c = W * 0.05;
+    for (const [x, y, dx, dy] of [[fx, fy, 1, 1], [fx + fw, fy, -1, 1], [fx, fy + fh, 1, -1], [fx + fw, fy + fh, -1, -1]] as const) {
+      ctx.beginPath();
+      ctx.moveTo(x, y + dy * c);
+      ctx.lineTo(x, y);
+      ctx.lineTo(x + dx * c, y);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = P.accent;
+    const sx = W * 0.5 + Math.sin(time * 1.3) * W * 0.12, sy = H * 0.46 + Math.cos(time * 1.1) * H * 0.08;
+    ctx.beginPath();
+    ctx.moveTo(sx - c * 0.6, sy);
+    ctx.lineTo(sx + c * 0.6, sy);
+    ctx.moveTo(sx, sy - c * 0.6);
+    ctx.lineTo(sx, sy + c * 0.6);
     ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(sx, sy, c * 0.9, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.font = `600 ${Math.round(W * 0.018)}px ${EN}`;
+    ctx.fillStyle = P.accent;
+    ctx.textAlign = "left";
+    ctx.fillText("INSPECTING…  GSM · PRINT · SEAMS · SIZE", fx, fy - W * 0.015);
   }
   // vignette + grain + flicker
   const v = ctx.createRadialGradient(W / 2, H * 0.45, W * 0.25, W / 2, H / 2, W * 0.95);
   v.addColorStop(0, "rgba(0,0,0,0)");
-  v.addColorStop(1, "rgba(0,0,0,0.75)");
+  v.addColorStop(1, T === "editorial" ? "rgba(0,0,0,0.12)" : "rgba(0,0,0,0.75)");
   ctx.fillStyle = v;
   ctx.fillRect(0, 0, W, H);
   const r = rand(Math.floor(time * 24) + 11);
-  ctx.globalAlpha = 0.08;
+  ctx.globalAlpha = T === "editorial" ? 0.05 : 0.08;
   for (let i = 0; i < 1600; i++) {
     ctx.fillStyle = r() > 0.5 ? "#fff" : "#000";
     ctx.fillRect(r() * W, r() * H, 2, 2);
   }
   ctx.globalAlpha = 1;
   if (r() > 0.93) {
-    ctx.fillStyle = "rgba(241,236,228,0.08)";
+    ctx.fillStyle = `rgba(${INK},0.08)`;
     ctx.fillRect(r() * W, 0, 1.5, H); // film scratch
   }
 
@@ -146,20 +264,20 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
   ctx.font = `800 ${Math.round(W * (cover && enNum ? 0.34 : 0.62))}px ${EN}`;
   ctx.textAlign = "left";
   ctx.lineWidth = 2;
-  ctx.strokeStyle = `rgba(241,236,228,${0.09 + 0.07 * onBeat})`;
+  ctx.strokeStyle = `rgba(${INK},${0.09 + 0.07 * onBeat})`;
   ctx.strokeText(big, -W * 0.04 + time * 8, H * (cover && enNum ? 0.27 : 0.64));
 
   // ---------- top bar + progress dots
   ctx.font = `800 ${Math.round(W * 0.028)}px ${EN}`;
   ctx.globalAlpha = easeOut(pIn * 2);
-  ctx.fillStyle = PALETTE.ink;
+  ctx.fillStyle = P.ink;
   ctx.fillText("TEMPORARY™", pad, pad + W * 0.02);
   ctx.textAlign = "right";
-  ctx.fillStyle = PALETTE.accent;
+  ctx.fillStyle = P.accent;
   ctx.fillText("● REC", W - pad, pad + W * 0.02);
   ctx.fillRect(pad, pad + W * 0.045, (W - pad * 2) * easeOut(pIn), 3);
   for (let d = 0; d < s.total; d++) {
-    ctx.fillStyle = d === s.index ? PALETTE.accent : "rgba(241,236,228,0.25)";
+    ctx.fillStyle = d === s.index ? P.accent : `rgba(${INK},0.25)`;
     const dw = d === s.index ? W * 0.05 : W * 0.014;
     const dx = pad + d * W * 0.024 + (d > s.index ? W * 0.036 : 0);
     ctx.fillRect(dx, pad + W * 0.07, dw, W * 0.008);
@@ -212,11 +330,11 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
         lc.scale(sc, sc);
         lc.font = `700 ${size}px ${AR}`;
         lc.textAlign = "center";
-        lc.fillStyle = t.accent ? PALETTE.accent : PALETTE.ink;
+        lc.fillStyle = t.accent ? P.accent : P.ink;
         lc.fillText(t.w, 0, size * 0.35);
         lc.restore();
         if (t.accent) {
-          lc.fillStyle = PALETTE.accent;
+          lc.fillStyle = P.accent;
           lc.fillRect(x - tw * easeOut((time - at - 0.2) / 0.4), y + size * 0.18, tw * easeOut((time - at - 0.2) / 0.4), Math.max(4, size * 0.06));
         }
         if (t.strike) strikes.push({ x: x - tw, y: y - size * 0.32, w: tw, at: at + 0.35 });
@@ -228,7 +346,7 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
   });
   for (const st of strikes) {
     const p = easeOut((time - st.at) / 0.3);
-    lc.fillStyle = PALETTE.accent;
+    lc.fillStyle = P.accent;
     lc.fillRect(st.x + st.w * (1 - p), st.y, st.w * p, Math.max(5, size * 0.08));
   }
   // chromatic ghost right after each landing + glitch slices at the start
@@ -249,28 +367,23 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
     }
   } else ctx.drawImage(L, 0, 0);
 
-  // ---------- English line types on, in a subtitle box
-  const enTop = top + lines.length * lh + size * 0.6;
+  // ---------- English line: editorial italic serif, types on
+  const enTop = top + lines.length * lh + size * 0.75;
   const enDelay = lastLand + 0.1;
   const shown = Math.floor(clamp((time - enDelay) / 0.8) * s.en.length);
-  let enSize = Math.round(W * 0.034);
-  ctx.letterSpacing = "3px";
-  for (; enSize > W * 0.02; enSize -= 1) {
-    ctx.font = `600 ${enSize}px ${EN}`;
-    if (ctx.measureText(s.en.toUpperCase()).width <= W - pad * 2 - 24) break;
-  }
-  if (shown > 0) {
-    const full = ctx.measureText(s.en.toUpperCase()).width;
-    ctx.fillStyle = "rgba(241,236,228,0.08)";
-    ctx.fillRect(W - pad - full - 16, enTop - enSize * 1.05, full + 24, enSize * 1.55);
+  let enSize = Math.round(W * 0.058);
+  for (; enSize > W * 0.03; enSize -= 1) {
+    ctx.font = `italic 400 ${enSize}px ${SERIF}`;
+    if (ctx.measureText(s.en).width <= W - pad * 2) break;
   }
   ctx.textAlign = "right";
-  ctx.fillStyle = PALETTE.ink;
-  ctx.fillText(s.en.toUpperCase().slice(0, shown) + (shown < s.en.length && Math.floor(time * 5) % 2 ? "▍" : ""), W - pad - 4, enTop);
-  ctx.letterSpacing = "0px";
+  ctx.fillStyle = P.ink;
+  ctx.globalAlpha = 0.92;
+  ctx.fillText(s.en.slice(0, shown) + (shown < s.en.length && Math.floor(time * 5) % 2 ? "|" : ""), W - pad, enTop);
+  ctx.globalAlpha = 1;
 
   // ---------- accents: self-drawing check / pulsing "send" call to action
-  ctx.strokeStyle = PALETTE.accent;
+  ctx.strokeStyle = P.accent;
   ctx.lineCap = "round";
   ctx.lineWidth = Math.max(8, W * 0.012);
   if (s.kind === "check") {
@@ -301,10 +414,10 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
     ctx.globalAlpha = ap;
     ctx.translate(W * 0.4, H * 0.78);
     ctx.scale(pulse, pulse);
-    ctx.fillStyle = PALETTE.accent;
+    ctx.fillStyle = P.accent;
     roundRect(ctx, -W * 0.27, -W * 0.055, W * 0.54, W * 0.11, W * 0.055);
     ctx.fill();
-    ctx.fillStyle = PALETTE.ink;
+    ctx.fillStyle = P.ink;
     ctx.font = `700 ${Math.round(W * 0.042)}px ${AR}`;
     ctx.textAlign = "center";
     ctx.direction = "rtl";
@@ -321,7 +434,7 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
     ctx.font = `800 ${Math.round(W * 0.03)}px ${EN}`;
     ctx.textAlign = "left";
     ctx.direction = "ltr";
-    ctx.fillStyle = PALETTE.ink;
+    ctx.fillStyle = P.ink;
     ctx.letterSpacing = "4px";
     ctx.fillText("SWIPE", pad, y);
     ctx.letterSpacing = "0px";
@@ -329,16 +442,90 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
     for (let k = 0; k < 3; k++) {
       const ph = (time * 2.2 - k * 0.22) % 1;
       ctx.globalAlpha = sp * (0.25 + 0.75 * Math.max(0, Math.sin(ph * Math.PI)));
-      ctx.fillStyle = PALETTE.accent;
+      ctx.fillStyle = P.accent;
       ctx.fillText("›", base + k * W * 0.035, y);
     }
     ctx.globalAlpha = sp;
     ctx.font = `700 ${Math.round(W * 0.03)}px ${AR}`;
     ctx.direction = "rtl";
-    ctx.fillStyle = PALETTE.dim;
+    ctx.fillStyle = P.dim;
     ctx.fillText("اسحب وشوف", base + W * 0.33, y);
     ctx.restore();
   }
+
+  // ---------- seamless panorama: a red thread enters at the left edge and leaves at the right edge
+  // exactly where the next slide picks it up, so swiping feels like one continuous piece
+  const seamY = (i: number) => H * (0.66 + 0.06 * Math.sin(i * 1.7));
+  const y0 = seamY(s.index), y1 = seamY(s.index + 1);
+  const draw = s.index === 0 ? easeOut((time - 0.6) / 1.2) : 1;
+  ctx.save();
+  ctx.strokeStyle = P.accent;
+  ctx.lineWidth = Math.max(4, W * 0.005);
+  ctx.setLineDash([W * 2]);
+  ctx.lineDashOffset = W * 2 * (1 - draw);
+  ctx.beginPath();
+  ctx.moveTo(0, y0);
+  ctx.bezierCurveTo(W * 0.35, y0 + H * 0.08 * Math.sin(time * 1.3), W * 0.65, y1 - H * 0.08 * Math.cos(time * 1.1), W, y1);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // travelling dot riding the thread
+  const u = (time * 0.35) % 1;
+  const bx = (1 - u) ** 3 * 0 + 3 * (1 - u) ** 2 * u * W * 0.35 + 3 * (1 - u) * u * u * W * 0.65 + u ** 3 * W;
+  const by = (1 - u) ** 3 * y0 + 3 * (1 - u) ** 2 * u * (y0 + H * 0.08 * Math.sin(time * 1.3)) + 3 * (1 - u) * u * u * (y1 - H * 0.08 * Math.cos(time * 1.1)) + u ** 3 * y1;
+  ctx.fillStyle = P.accent;
+  ctx.beginPath();
+  ctx.arc(bx, by, W * 0.009 * (1 + 0.5 * onBeat), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  // peek of the next slide's number cut by the right edge ("there's more →")
+  if (s.index < s.total - 1) {
+    ctx.font = `800 ${Math.round(W * 0.3)}px ${EN}`;
+    ctx.textAlign = "left";
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(229,87,77,${0.35 + 0.2 * onBeat})`;
+    ctx.strokeText(String(s.index + 2).padStart(2, "0"), W * 0.9 - Math.sin(time * 2) * W * 0.01, H * 0.58);
+  }
+
+  // ---------- spinning text ring (cover + end)
+  if (cover || s.kind === "end") {
+    const ring = " KNOW BEFORE YOU PAY ✳ EVERYTHING IS TEMPORARY ✳";
+    const cx = pad + W * 0.16, cy = cover ? H * 0.2 : H * 0.62, rad = W * 0.12;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(time * 0.6);
+    ctx.font = `700 ${Math.round(W * 0.019)}px ${EN}`;
+    ctx.fillStyle = `rgba(${INK},${0.55 * easeOut(pIn * 1.5)})`;
+    ctx.textAlign = "center";
+    const n = ring.length;
+    for (let i = 0; i < n; i++) {
+      ctx.save();
+      ctx.rotate((i / n) * Math.PI * 2);
+      ctx.fillText(ring[i], 0, -rad);
+      ctx.restore();
+    }
+    ctx.fillStyle = P.accent;
+    ctx.beginPath();
+    ctx.arc(0, 0, W * 0.012 * (1 + 0.6 * onBeat), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ---------- camera HUD: corner brackets + timecode
+  ctx.strokeStyle = `rgba(${INK},0.35)`;
+  ctx.lineWidth = 2;
+  const cb = W * 0.035, m = W * 0.03;
+  for (const [x, y, dx, dy] of [[m, m, 1, 1], [W - m, m, -1, 1], [m, H - m, 1, -1], [W - m, H - m, -1, -1]] as const) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + dy * cb);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x + dx * cb, y);
+    ctx.stroke();
+  }
+  const fr = Math.floor(time * 30) % 30, sec = Math.floor(time);
+  ctx.font = `500 ${Math.round(W * 0.018)}px ${EN}`;
+  ctx.textAlign = "right";
+  ctx.fillStyle = P.dim;
+  ctx.fillText(`00:0${s.index}:${String(sec).padStart(2, "0")}:${String(fr).padStart(2, "0")}  ·  4:5`, W - pad, pad + W * 0.1);
 
   // ---------- bottom ticker
   const tick = "  اعرف قبل ما تدفع  ·  KNOW BEFORE YOU PAY  ·  EVERYTHING IS TEMPORARY  ·";
@@ -347,18 +534,18 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
   const tw2 = ctx.measureText(tick).width;
   const ty = H - pad * 0.9;
   ctx.globalAlpha = 0.6;
-  ctx.fillStyle = PALETTE.ink;
+  ctx.fillStyle = P.ink;
   ctx.textAlign = "left";
   for (let x = -((time * 90) % tw2); x < W; x += tw2) ctx.fillText(tick, x, ty);
   ctx.globalAlpha = 1;
-  ctx.fillStyle = PALETTE.accent;
+  ctx.fillStyle = P.accent;
   ctx.fillRect(0, ty - W * 0.045, W * clamp(time / dur), 2);
 
   ctx.restore(); // end camera
 
   // ---------- plate for the real logo (not shaken — the logo is pasted at a fixed spot)
   if (logoBox) {
-    ctx.fillStyle = PALETTE.plate;
+    ctx.fillStyle = P.plate;
     const p = W * 0.012;
     roundRect(ctx, logoBox.x - p, logoBox.y - p, logoBox.w + p * 2, logoBox.h + p * 2, W * 0.012);
     ctx.fill();
@@ -366,7 +553,7 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
 
   // ---------- impact flash + whip-out transition
   if (impact > 0) {
-    ctx.fillStyle = `rgba(241,236,228,${0.35 * impact * impact})`;
+    ctx.fillStyle = `rgba(${INK},${0.35 * impact * impact})`;
     ctx.fillRect(0, 0, W, H);
   }
   if (pOut > 0) {
@@ -374,9 +561,9 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
     ctx.globalAlpha = 0.5;
     for (let k = 1; k <= 4; k++) ctx.drawImage(ctx.canvas, -W * 0.06 * k * e, 0);
     ctx.globalAlpha = 1;
-    ctx.fillStyle = PALETTE.accent;
+    ctx.fillStyle = P.accent;
     ctx.fillRect(W * (1 - e), 0, W * e, H);
-    ctx.fillStyle = PALETTE.bg;
+    ctx.fillStyle = P.bg;
     ctx.fillRect(W * (1 - Math.max(0, e - 0.2)), 0, W, H);
   }
 }

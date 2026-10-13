@@ -255,7 +255,7 @@ export async function renderPiece(brandId: string, item: ContentItem, onStep?: (
       const lo = (await retry(() => resolveOverlays(brandId, [logo], item.product_id), "Loading your logo")).overlays;
       const bm = lo[0] ? await bitmap(lo[0].file) : null;
       const kind = i === 0 ? "cover" : i === jobs.length - 1 && !only ? "end" : /check|اسأل|\d/.test(j.frame.text) ? "check" : "plain";
-      const webm = await recordSlide({ ar: j.frame.text, en: j.frame.en ?? "", seconds: j.frame.seconds ?? 5, index: j.frame.index ?? i, total: j.frame.total ?? jobs.length, kind: kind as any }, 1080, 1350, bm ? bm.width / bm.height : 1);
+      const webm = await recordSlide({ ar: j.frame.text, en: j.frame.en ?? "", seconds: j.frame.seconds ?? 5, index: j.frame.index ?? i, total: j.frame.total ?? jobs.length, kind: kind as any, template: (item.output?.template || "cinematic") as any }, 1080, 1350, bm ? bm.width / bm.height : 1);
       onStep?.(`Converting slide ${i + 1}/${jobs.length} to MP4 + logo…`);
       const mp4 = await overlayVideo(webm, lo.map((o) => ({ file: o.file, position: o.position, widthPct: o.widthPct })), undefined, { aacAudio: true });
       const path = `${brandId}/files/media/${id}.mp4`;
