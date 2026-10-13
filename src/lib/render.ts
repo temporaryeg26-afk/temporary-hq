@@ -9,7 +9,7 @@ import { Aspect, bitmap, composite, SIZES } from "./media";
 import { mutate, newId, now } from "./store";
 import type { ContentItem, Media } from "./types";
 import { overlayVideo } from "./video";
-import { recordSlide } from "./motion";
+import { mp4Mime, recordSlide } from "./motion";
 
 export type Theme = { bg: string; fg: string; accent: string; muted: string };
 export const DARK: Theme = { bg: "#0E0D0C", fg: "#ECE7DF", accent: "#E5574D", muted: "#8E877E" };
@@ -229,6 +229,8 @@ export function missingJobs(item: ContentItem, media: Media[]): RenderJob[] {
  * (so progress is never lost), and hide earlier renders of the same slot (nothing is deleted).
  * only = render just these slots (to resume); otherwise render all of them.
  */
+const BPM_FOR = (item: ContentItem) => Number(item.output?.bpm) || 110;
+
 export async function renderPiece(brandId: string, item: ContentItem, onStep?: (s: string) => void, only?: RenderJob[]) {
   const jobs = only ?? jobsFor(item);
   if (!jobs.length) return 0;
@@ -255,9 +257,13 @@ export async function renderPiece(brandId: string, item: ContentItem, onStep?: (
       const lo = (await retry(() => resolveOverlays(brandId, [logo], item.product_id), "Loading your logo")).overlays;
       const bm = lo[0] ? await bitmap(lo[0].file) : null;
       const kind = i === 0 ? "cover" : i === jobs.length - 1 && !only ? "end" : /check|اسأل|\d/.test(j.frame.text) ? "check" : "plain";
-      const webm = await recordSlide({ ar: j.frame.text, en: j.frame.en ?? "", seconds: j.frame.seconds ?? 5, index: j.frame.index ?? i, total: j.frame.total ?? jobs.length, kind: kind as any, template: (item.output?.template || "cinematic") as any }, 1080, 1350, bm ? bm.width / bm.height : 1);
-      onStep?.(`Converting slide ${i + 1}/${jobs.length} to MP4 + logo…`);
-      const mp4 = await overlayVideo(webm, lo.map((o) => ({ file: o.file, position: o.position, widthPct: o.widthPct })), undefined, { aacAudio: true });
+      const webm = await recordSlide({ ar: j.frame.text, en: j.frame.en ?? "", seconds: j.frame.seconds ?? 5, index: j.frame.index ?? i, total: j.frame.total ?? jobs.length, kind: kind as any, template: (item.output?.template || "cinematic") as any }, 1080, 1350, bm ? bm.width / bm.height : 1, BPM_FOR(item), bm && mp4Mime() ? bm : null);
+      let mp4 = webm;
+      if (!(bm && mp4Mime())) {
+        // older browsers: convert + paste the logo with the video engine (slow)
+        onStep?.(`Converting slide ${i + 1}/${jobs.length} to MP4 + logo…`);
+        mp4 = await overlayVideo(webm, lo.map((o) => ({ file: o.file, position: o.position, widthPct: o.widthPct })), undefined, { aacAudio: true });
+      }
       const path = `${brandId}/files/media/${id}.mp4`;
       onStep?.(`Saving slide ${i + 1}/${jobs.length}…`);
       await retry(() => uploadFile(path, mp4, `HQ (${currentLogin()}): motion slide for ${item.title}`), "Saving the video");

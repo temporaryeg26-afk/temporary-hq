@@ -840,7 +840,13 @@ export function logoBoxFor(W: number, H: number, logoAspect: number) {
 }
 
 /** Record one slide (picture + our beat) in real time → WebM with audio. */
-export async function recordSlide(s: MotionSlide, W: number, H: number, logoAspect: number, bpm = BPM_DEFAULT): Promise<Blob> {
+/** Can this browser record straight to MP4 (no slow conversion step)? */
+export function mp4Mime() {
+  return ["video/mp4;codecs=avc1.640028,mp4a.40.2", "video/mp4;codecs=avc1,mp4a", "video/mp4"].find((m) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(m)) ?? null;
+}
+
+/** Record one slide. With `logo` (your original logo file) it is drawn on every frame, and the result is MP4 when the browser supports it. */
+export async function recordSlide(s: MotionSlide, W: number, H: number, logoAspect: number, bpm = BPM_DEFAULT, logo?: CanvasImageSource | null): Promise<Blob> {
   await motionFonts();
   const c = document.createElement("canvas");
   c.width = W;
@@ -854,8 +860,9 @@ export async function recordSlide(s: MotionSlide, W: number, H: number, logoAspe
   if (ac.state !== "running") throw new Error("The browser blocked the music. Click the Render button yourself (a real click) and keep this tab in front.");
   const dest = ac.createMediaStreamDestination();
   const stream = new MediaStream([...c.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]);
-  const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find((m) => MediaRecorder.isTypeSupported(m)) ?? "video/webm";
-  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 });
+  const mp4 = logo ? mp4Mime() : null;
+  const mime = mp4 ?? ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find((m) => MediaRecorder.isTypeSupported(m)) ?? "video/webm";
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 3_500_000, audioBitsPerSecond: 192_000 });
   const chunks: Blob[] = [];
   rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
   const done = new Promise<void>((res) => (rec.onstop = () => res()));
@@ -866,6 +873,7 @@ export async function recordSlide(s: MotionSlide, W: number, H: number, logoAspe
     const tick = () => {
       const el = (performance.now() - t0) / 1000;
       drawMotion(ctx, W, H, s, el, bpm, box);
+      if (logo) ctx.drawImage(logo, box.x, box.y, box.w, box.h);
       if (el >= s.seconds) return res();
       setTimeout(tick, 1000 / 30);
     };
@@ -875,5 +883,5 @@ export async function recordSlide(s: MotionSlide, W: number, H: number, logoAspe
   await done;
   stop();
   await ac.close();
-  return new Blob(chunks, { type: "video/webm" });
+  return new Blob(chunks, { type: mp4 ? "video/mp4" : "video/webm" });
 }
