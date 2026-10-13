@@ -7,6 +7,7 @@ import { downloadFile } from "../lib/github";
 import { rewritePartPack } from "../lib/packs";
 import { list } from "../lib/store";
 import type { ContentItem, Media } from "../lib/types";
+import { drawMotion, logoBoxFor, motionFonts, startBeat } from "../lib/motion";
 
 const FLOW = "https://labs.google/fx/tools/flow";
 const words = (s: string) => (s ?? "").trim().split(/\s+/).filter(Boolean).length;
@@ -350,20 +351,7 @@ export function MotionPage({ id }: { id: string }) {
 
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
         <div>
-          <div className="relative aspect-[4/5] overflow-hidden rounded-panel border border-rule" style={{ background: bg, color: fg }}>
-            {s && (
-              <div key={`${cur}-${playing}`} className="motion-in absolute inset-0 flex flex-col justify-center p-7">
-                <span className="absolute left-0 top-0 h-1 motion-bar" style={{ background: accent, animationDuration: `${Number(s.seconds) || 5}s`, animationPlayState: playing ? "running" : "paused" }} />
-                <p className="text-[11px] uppercase tracking-widest opacity-60">
-                  {cur + 1}/{slides.length}
-                </p>
-                <p dir="auto" className="mt-3 text-2xl font-bold leading-snug">
-                  {s.copy}
-                </p>
-                <p className="absolute bottom-3 right-4 text-[10px] font-bold tracking-widest opacity-70">TEMPORARY™</p>
-              </div>
-            )}
-          </div>
+          {s && <MotionCanvas slide={s} index={cur} total={slides.length} bpm={Number(o.bpm) || 110} playing={playing} />}
           <div className="mt-3 flex items-center gap-2">
             <Button kind="primary" onClick={() => { setCur(0); setPlaying(true); }}>
               ▶ Play ({total}s)
@@ -375,7 +363,7 @@ export function MotionPage({ id }: { id: string }) {
               ›
             </Button>
           </div>
-          <p className="mt-2 text-xs text-concrete">A quick preview of text, order and timing. The final animation is rendered by the Motion designer and shows on each slide once uploaded.</p>
+          <p className="mt-2 text-xs text-concrete">Live preview with the beat — exactly what gets exported. Press ▶ Play to hear it.</p>
           <dl className="mt-4 space-y-2 text-sm">
             <div>
               <dt className="text-xs text-concrete">Idea</dt>
@@ -417,8 +405,12 @@ export function MotionPage({ id }: { id: string }) {
                 </div>
                 <div className="mt-2 grid gap-2 md:grid-cols-2">
                   <div>
-                    <label className="text-xs">Text on the slide</label>
+                    <label className="text-xs">Text on the slide (Egyptian Arabic)</label>
                     <textarea dir="auto" rows={2} value={sl.copy ?? ""} onChange={(e) => setSlide(n, { copy: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-xs">English line</label>
+                    <textarea rows={2} value={sl.copy_en ?? ""} onChange={(e) => setSlide(n, { copy_en: e.target.value })} />
                   </div>
                   <div>
                     <label className="text-xs">Motion (what moves, on which beat)</label>
@@ -466,4 +458,43 @@ export function MotionPage({ id }: { id: string }) {
       )}
     </div>
   );
+}
+
+/** Live canvas preview of one motion slide, with our beat while playing. */
+function MotionCanvas({ slide, index, total, bpm, playing }: { slide: any; index: number; total: number; bpm: number; playing: boolean }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const c = ref.current;
+    if (!c) return;
+    const ctx = c.getContext("2d")!;
+    const seconds = Number(slide.seconds) || 5;
+    const kind = index === 0 ? "cover" : index === total - 1 ? "end" : /check|اسأل|\d/.test(slide.copy ?? "") ? "check" : "plain";
+    const s = { ar: String(slide.copy ?? ""), en: String(slide.copy_en ?? ""), seconds, index, total, kind } as const;
+    const box = logoBoxFor(c.width, c.height, 1);
+    let raf = 0;
+    let ac: AudioContext | null = null;
+    let stop: (() => void) | null = null;
+    let live = true;
+    motionFonts().then(() => {
+      if (!live) return;
+      const t0 = performance.now();
+      if (playing) {
+        ac = new AudioContext();
+        stop = startBeat(ac, ac.destination, bpm, seconds);
+      }
+      const frame = () => {
+        const t = playing ? (performance.now() - t0) / 1000 : Math.min(seconds - 0.6, 2.6);
+        drawMotion(ctx, c.width, c.height, s as any, t, bpm, box);
+        if (playing && t < seconds) raf = requestAnimationFrame(frame);
+      };
+      frame();
+    });
+    return () => {
+      live = false;
+      cancelAnimationFrame(raf);
+      stop?.();
+      ac?.close().catch(() => null);
+    };
+  }, [slide, index, total, bpm, playing]);
+  return <canvas ref={ref} width={540} height={675} className="w-full rounded-panel border border-rule" aria-label="Motion slide preview" />;
 }
