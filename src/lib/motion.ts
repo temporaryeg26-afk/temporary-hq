@@ -849,7 +849,9 @@ export async function recordSlide(s: MotionSlide, W: number, H: number, logoAspe
   const box = logoBoxFor(W, H, logoAspect);
   drawMotion(ctx, W, H, s, 0, bpm, box);
   const ac = new AudioContext();
-  await ac.resume();
+  // browsers only start audio after a real click — never hang waiting for it
+  await Promise.race([ac.resume(), new Promise((r) => setTimeout(r, 1500))]);
+  if (ac.state !== "running") throw new Error("The browser blocked the music. Click the Render button yourself (a real click) and keep this tab in front.");
   const dest = ac.createMediaStreamDestination();
   const stream = new MediaStream([...c.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]);
   const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find((m) => MediaRecorder.isTypeSupported(m)) ?? "video/webm";

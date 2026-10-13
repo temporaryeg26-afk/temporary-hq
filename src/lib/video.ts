@@ -74,7 +74,7 @@ export async function overlayVideo(
   args.push(
     "-filter_complex", filter.replace(/;$/, ""),
     "-map", last, "-map", "0:a?",
-    "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p",
+    "-c:v", "libx264", "-preset", "veryfast", ...(opts.aacAudio ? ["-crf", "23", "-maxrate", "3M", "-bufsize", "6M"] : ["-crf", "18"]), "-pix_fmt", "yuv420p",
     ...(opts.aacAudio ? ["-c:a", "aac", "-b:a", "192k"] : ["-c:a", "copy"]), "-movflags", "+faststart",
     "out.mp4"
   );
