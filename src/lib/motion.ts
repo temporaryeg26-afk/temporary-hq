@@ -142,11 +142,16 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
   const enTop = top + lines.length * lh + size * 0.55;
   const enDelay = 0.2 + wi * (beat / 3.2);
   const shown = Math.floor(clamp((time - enDelay) / 0.9) * s.en.length);
-  ctx.font = `500 ${Math.round(W * 0.034)}px ${EN}`;
+  // shrink the English line until the full sentence fits (never runs off the edge)
+  let enSize = Math.round(W * 0.034);
+  ctx.letterSpacing = "3px";
+  for (; enSize > W * 0.02; enSize -= 1) {
+    ctx.font = `500 ${enSize}px ${EN}`;
+    if (ctx.measureText(s.en.toUpperCase()).width <= W - pad * 2) break;
+  }
   ctx.textAlign = "right";
   ctx.fillStyle = PALETTE.dim;
   const enText = s.en.toUpperCase().slice(0, shown) + (shown < s.en.length && Math.floor(time * 4) % 2 ? "▍" : "");
-  ctx.letterSpacing = "3px";
   ctx.fillText(enText, W - pad, enTop);
   ctx.letterSpacing = "0px";
 
