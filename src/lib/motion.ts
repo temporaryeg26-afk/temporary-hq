@@ -312,6 +312,34 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
     ctx.restore();
   }
 
+  // ---------- cover: animated "swipe" cue (curiosity → swipe)
+  if (cover) {
+    const sp = easeOut((time - 1.2) / 0.4);
+    ctx.save();
+    ctx.globalAlpha = sp;
+    const y = H * 0.8;
+    ctx.font = `800 ${Math.round(W * 0.03)}px ${EN}`;
+    ctx.textAlign = "left";
+    ctx.direction = "ltr";
+    ctx.fillStyle = PALETTE.ink;
+    ctx.letterSpacing = "4px";
+    ctx.fillText("SWIPE", pad, y);
+    ctx.letterSpacing = "0px";
+    const base = pad + W * 0.15;
+    for (let k = 0; k < 3; k++) {
+      const ph = (time * 2.2 - k * 0.22) % 1;
+      ctx.globalAlpha = sp * (0.25 + 0.75 * Math.max(0, Math.sin(ph * Math.PI)));
+      ctx.fillStyle = PALETTE.accent;
+      ctx.fillText("›", base + k * W * 0.035, y);
+    }
+    ctx.globalAlpha = sp;
+    ctx.font = `700 ${Math.round(W * 0.03)}px ${AR}`;
+    ctx.direction = "rtl";
+    ctx.fillStyle = PALETTE.dim;
+    ctx.fillText("اسحب وشوف", base + W * 0.33, y);
+    ctx.restore();
+  }
+
   // ---------- bottom ticker
   const tick = "  اعرف قبل ما تدفع  ·  KNOW BEFORE YOU PAY  ·  EVERYTHING IS TEMPORARY  ·";
   ctx.font = `600 ${Math.round(W * 0.026)}px ${AR}`;
