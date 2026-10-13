@@ -7,7 +7,7 @@ import { downloadFile } from "../lib/github";
 import { rewritePartPack } from "../lib/packs";
 import { list } from "../lib/store";
 import type { ContentItem, Media } from "../lib/types";
-import { drawMotion, logoBoxFor, motionFonts, startBeat } from "../lib/motion";
+import { drawMotion, logoBoxFor, motionFonts, startBeat, TEMPLATES } from "../lib/motion";
 
 const FLOW = "https://labs.google/fx/tools/flow";
 const words = (s: string) => (s ?? "").trim().split(/\s+/).filter(Boolean).length;
@@ -351,7 +351,23 @@ export function MotionPage({ id }: { id: string }) {
 
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
         <div>
-          {s && <MotionCanvas slide={s} index={cur} total={slides.length} bpm={Number(o.bpm) || 110} playing={playing} />}
+          {s && <MotionCanvas slide={s} index={cur} total={slides.length} bpm={Number(o.bpm) || 110} playing={playing} template={o.template || "cinematic"} />}
+          <div className="mt-4">
+            <p className="text-xs uppercase tracking-wide text-concrete">Template</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {TEMPLATES.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => { setO({ ...o, template: t.id }); setDirty(true); setPlaying(false); }}
+                  className={`rounded-panel border px-3 py-2 text-left text-xs ${(o.template || "cinematic") === t.id ? "border-ink bg-ink text-white" : "border-rule hover:border-ink"}`}
+                >
+                  <span className="block font-semibold">{t.name}</span>
+                  <span className="block opacity-70">{t.desc}</span>
+                </button>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-concrete">Pick a look, press Save, then re-make the designs.</p>
+          </div>
           <div className="mt-3 flex items-center gap-2">
             <Button kind="primary" onClick={() => { setCur(0); setPlaying(true); }}>
               ▶ Play ({total}s)
@@ -461,7 +477,7 @@ export function MotionPage({ id }: { id: string }) {
 }
 
 /** Live canvas preview of one motion slide, with our beat while playing. */
-function MotionCanvas({ slide, index, total, bpm, playing }: { slide: any; index: number; total: number; bpm: number; playing: boolean }) {
+function MotionCanvas({ slide, index, total, bpm, playing, template }: { slide: any; index: number; total: number; bpm: number; playing: boolean; template: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const c = ref.current;
@@ -469,7 +485,7 @@ function MotionCanvas({ slide, index, total, bpm, playing }: { slide: any; index
     const ctx = c.getContext("2d")!;
     const seconds = Number(slide.seconds) || 5;
     const kind = index === 0 ? "cover" : index === total - 1 ? "end" : /check|اسأل|\d/.test(slide.copy ?? "") ? "check" : "plain";
-    const s = { ar: String(slide.copy ?? ""), en: String(slide.copy_en ?? ""), seconds, index, total, kind } as const;
+    const s = { ar: String(slide.copy ?? ""), en: String(slide.copy_en ?? ""), seconds, index, total, kind, template } as const;
     const box = logoBoxFor(c.width, c.height, 1);
     let raf = 0;
     let ac: AudioContext | null = null;
@@ -495,6 +511,6 @@ function MotionCanvas({ slide, index, total, bpm, playing }: { slide: any; index
       stop?.();
       ac?.close().catch(() => null);
     };
-  }, [slide, index, total, bpm, playing]);
+  }, [slide, index, total, bpm, playing, template]);
   return <canvas ref={ref} width={540} height={675} className="w-full rounded-panel border border-rule" aria-label="Motion slide preview" />;
 }
