@@ -46,6 +46,7 @@ const RULES = `NON-NEGOTIABLE RULES
 const SCHEMA = `ANSWER = ONE JSON object, nothing else:
 {
   "week_theme": "…",
+  "research": [{ "finding": "…", "source": "url", "use": "how we use it" }],
   "items": [
     {
       "date": "YYYY-MM-DD", "time": "HH:MM",
@@ -57,7 +58,7 @@ const SCHEMA = `ANSWER = ONE JSON object, nothing else:
       // static:
       "headline": "on-image Arabic text", "headline_en": "…", "image_prompt": "full luxury art-direction prompt for ChatGPT, 4:5, keep bottom-right 220px empty for the logo",
       // motion_carousel (5–8 slides): *word* = accent, ~word~ = crossed out
-      "slides": [{ "copy": "Arabic", "copy_en": "English", "seconds": 5 }],
+      "slides": [{ "copy": "Arabic", "copy_en": "English", "seconds": 5, "visual": "what the motion scene shows (acts out the point; different style per carousel)" }],
       // story (3–5 frames):
       "frames": [{ "text": "Arabic", "text_en": "English", "sticker": "Poll: … / … | Question: … | Link | none" }],
       // reel (6–12s):
@@ -77,7 +78,9 @@ export function weekCommand(cfg: RunConfig, brand: Brand, products: Product[]) {
   const head =
     cfg.writer === "claude"
       ? `TEMP. HQ — RUN AGENCY (Claude). Do the whole chain in one go: check competitors' latest public posts + trends, plan, write, hook-check, render the motion carousels/Reels/stories with the HQ motion engine, then import everything into TEMP. HQ in ONE upload. Only stop for things that need me.`
-      : `You are the full creative team of TEMPORARY™ (strategist, copywriter, Egyptian-Arabic editor, hook critic). Write the content pack below. Check every hook against the rules before answering.`;
+      : `You are the full creative team of TEMPORARY™ (researcher, strategist, copywriter, Egyptian-Arabic editor, hook critic).
+STEP 1 — RESEARCH (use web search): what Egyptian / Cairo streetwear accounts posted in the last 2–3 weeks (formats, hooks, what got visibly more likes/comments, what people ask or complain about in comments), plus current Instagram Reel/carousel formats that are working. Put findings with links in "research".
+STEP 2 — write the content pack below from that research. Check every hook against the rules before answering.`;
   return `${head}
 
 PERIOD: ${cfg.start} for ${cfg.days} days. EVERY DAY: ${fmts}.
@@ -126,7 +129,7 @@ export async function importWeek(brand: Brand, products: Product[], json: any, w
       pillar: (it.pillar ?? "discovery") as ContentItem["pillar"],
       title: String(it.title ?? it.hook ?? "Piece").slice(0, 140),
       scheduled_for: String(it.date ?? "").slice(0, 10),
-      brief: { post_time: it.time, location: it.location ?? "Cairo, Egypt", week_theme: json.week_theme, made_by: writer, why: it.why },
+      brief: { post_time: it.time, location: it.location ?? "Cairo, Egypt", week_theme: json.week_theme, made_by: writer, why: it.why, research: json.research ?? [] },
       output,
       rule_flags: checkRules(output, products as any, code),
       qa: null,
