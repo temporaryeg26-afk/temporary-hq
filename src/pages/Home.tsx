@@ -4,6 +4,7 @@ import { TEAM, EmployeeId } from "../lib/agency";
 import { loadAssets } from "../lib/assets";
 import { loadContent, loadPlans, loadResearch, loadSessions, loadAds, loadPeriods, loadTasks } from "../lib/data";
 import type { ContentItem } from "../lib/types";
+import RunAgency from "../components/RunAgency";
 
 type Need = { text: string; why?: string; action: string; href: string; tone: "act" | "info" };
 type Work = { status: "idle" | "working" | "waiting_director" | "waiting_you" | "done"; task: string };
@@ -129,6 +130,8 @@ export default function Home() {
           </a>
         </div>
       </header>
+
+      <RunAgency />
 
       {/* Needed from you */}
       <section className="mb-10">

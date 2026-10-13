@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useBrand } from "../App";
-import { Button, ErrorNote, Loading, Status, useAsync } from "../components/ui";
+import { Button, Copy, ErrorNote, Loading, Status, useAsync } from "../components/ui";
 import { loadContent, log } from "../lib/data";
 import { currentLogin, downloadFile } from "../lib/github";
 import { list, mutate, now } from "../lib/store";
@@ -163,7 +163,8 @@ function Grid({ items, mediaOf, onOpen }: { items: ContentItem[]; mediaOf: (id: 
   const posted = feed.filter((i) => i.status === "published").length;
   return (
     <section>
-      <p className="text-sm text-concrete">What this is: how the Instagram profile will look once everything planned is posted (newest first). Click a tile to preview or edit it.</p>
+      <p className="text-sm text-concrete">What this is: how the Instagram profile will look once everything planned is posted (newest first). Click a tile to preview, approve, copy the caption and download the files.</p>
+      <WeekTools items={items} mediaOf={mediaOf} />
       <div className="mx-auto mt-5 max-w-md rounded-panel border border-rule bg-[#000] pb-1 text-white">
         <div className="flex items-center gap-5 px-4 py-4">
           <div className="grid h-20 w-20 shrink-0 place-items-center rounded-full border border-rule bg-[#111] text-xl font-bold">T.</div>
@@ -302,6 +303,133 @@ function Approvals({ items, mediaOf, onChange }: { items: ContentItem[]; mediaOf
   );
 }
 
+// ------------------------------------------------------------------ posting tools (approve, copy, download)
+
+const extOf = (m: Media) => (m.kind === "video" ? "mp4" : "png");
+const captionAr = (o: any) => String(o.caption_ar ?? o.caption ?? "");
+const captionEn = (o: any) => String(o.caption_en ?? "");
+const tagsOf = (o: any) => ((o.hashtags ?? []) as string[]).map(tag).join(" ");
+async function saveBlob(path: string, name: string) {
+  const b = await downloadFile(path);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(b);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+async function downloadPiece(item: ContentItem, media: Media[]) {
+  const base = `TEMPORARY_${item.scheduled_for}_${item.format}`;
+  for (const [i, m] of media.entries()) if (m.storage_path) await saveBlob(m.storage_path, `${base}_${String(i + 1).padStart(2, "0")}.${extOf(m)}`);
+}
+async function setStatus(brandId: string, item: ContentItem, approve: boolean, note: string) {
+  await mutate<ContentItem>(
+    brandId,
+    "content",
+    (d) => d.map((x) => (x.id !== item.id ? x : approve ? { ...x, status: "approved" as const, updated_at: now() } : { ...x, status: "brief" as const, revision_note: note, revisions: x.revisions + 1, updated_at: now() })),
+    `${approve ? "approved" : "sent back"}: ${item.title}`,
+  );
+  await log(brandId, `${currentLogin()} ${approve ? "approved" : "sent back"} "${item.title}".${approve ? "" : " Note: " + note}`);
+}
+
+function PostActions({ item, media, onChange }: { item: ContentItem; media: Media[]; onChange: () => void }) {
+  const { brand } = useBrand();
+  const o = item.output ?? {};
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const full = [captionAr(o), captionEn(o), tagsOf(o)].filter(Boolean).join("\n\n");
+  const decide = async (approve: boolean) => {
+    if (!approve && !note.trim()) return setErr("Write what to change.");
+    setBusy(true);
+    setErr(null);
+    try {
+      await setStatus(brand.id, item, approve, note.trim());
+      setNote("");
+      onChange();
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+    setBusy(false);
+  };
+  return (
+    <div className="mb-4 rounded-panel border border-rule bg-soot p-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        <Copy text={full} label="Copy caption + hashtags" />
+        {captionAr(o) && <Copy text={captionAr(o)} label="Copy Masri" />}
+        {captionEn(o) && <Copy text={captionEn(o)} label="Copy English" />}
+        {tagsOf(o) && <Copy text={tagsOf(o)} label="Copy hashtags" />}
+        <span className="text-concrete">📍 {item.brief?.location ?? "Cairo, Egypt"}</span>
+        {o.ai_label && <span className="text-ochre">Turn on Instagram's "AI info" label</span>}
+        {media.length > 0 && (
+          <button className="text-ultra hover:underline" onClick={() => downloadPiece(item, media).catch((e) => setErr(e.message))}>
+            Download {media.length} file{media.length === 1 ? "" : "s"}
+          </button>
+        )}
+      </div>
+      {item.status !== "published" && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {item.status !== "approved" && (
+            <Button kind="primary" busy={busy} onClick={() => decide(true)}>
+              Approve
+            </Button>
+          )}
+          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="What to change…" className="min-w-0 flex-1 text-sm" />
+          <Button busy={busy} onClick={() => decide(false)}>
+            Send back
+          </Button>
+        </div>
+      )}
+      <ErrorNote msg={err} />
+    </div>
+  );
+}
+
+function WeekTools({ items, mediaOf }: { items: ContentItem[]; mediaOf: (id: string) => Media[] }) {
+  const { brand } = useBrand();
+  const today = iso(new Date());
+  const weekEnd = iso(new Date(Date.now() + 13 * 86400000));
+  const next = items.filter((i) => i.scheduled_for >= today && i.scheduled_for <= weekEnd).sort((a, b) => (a.scheduled_for + timeOf(a)).localeCompare(b.scheduled_for + timeOf(b)));
+  const waiting = next.filter((i) => i.status === "needs_you");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const csv = () => {
+    const q = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const rows = [["date", "time", "format", "title", "status", "caption_masri", "caption_english", "hashtags", "location"].join(",")];
+    for (const i of next) rows.push([i.scheduled_for, timeOf(i), FORMAT_NAME[i.format], i.title, i.status, captionAr(i.output ?? {}), captionEn(i.output ?? {}), tagsOf(i.output ?? {}), i.brief?.location ?? "Cairo, Egypt"].map(q).join(","));
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["\ufeff" + rows.join("\n")], { type: "text/csv" }));
+    a.download = `TEMPORARY_schedule_${today}.csv`;
+    a.click();
+  };
+  const run = async (k: string, fn: () => Promise<void>) => {
+    setBusy(k);
+    setErr(null);
+    try {
+      await fn();
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+    setBusy(null);
+  };
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+      <span className="text-concrete">Next 2 weeks: {next.length} pieces · {waiting.length} waiting for you</span>
+      <button className="text-ultra hover:underline" onClick={csv}>
+        Download schedule + captions (CSV)
+      </button>
+      <button className="text-ultra hover:underline" disabled={!!busy} onClick={() => run("dl", async () => { for (const i of next) await downloadPiece(i, mediaOf(i.id)); })}>
+        {busy === "dl" ? "Downloading…" : "Download all files"}
+      </button>
+      {waiting.length > 0 && (
+        <button className="text-moss hover:underline" disabled={!!busy} onClick={() => run("ok", async () => { for (const i of waiting) await setStatus(brand.id, i, true, ""); location.reload(); })}>
+          {busy === "ok" ? "Approving…" : `Approve all ${waiting.length}`}
+        </button>
+      )}
+      <ErrorNote msg={err} />
+    </div>
+  );
+}
+
 // ------------------------------------------------------------------ phone preview + editing
 
 function PreviewModal({ item, media, onClose, onChange }: { item: ContentItem; media: Media[]; onClose: () => void; onChange: () => void }) {
@@ -329,6 +457,7 @@ function PreviewModal({ item, media, onClose, onChange }: { item: ContentItem; m
             </button>
           </div>
         </div>
+        <PostActions item={item} media={media} onChange={onChange} />
         <div className="grid gap-6 md:grid-cols-[360px_1fr]">
           <Phone item={item} media={media} />
           <Editor item={item} onChange={onChange} />
