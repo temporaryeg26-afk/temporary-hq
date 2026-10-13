@@ -24,6 +24,7 @@ import DoctrinePage from "./pages/Doctrine";
 import WeekPage from "./pages/Week";
 import AdsPage from "./pages/Ads";
 import OrdersPage from "./pages/Orders";
+import PerformancePage from "./pages/Performance";
 
 // ------------------------------------------------------------------ tiny hash router
 
@@ -76,8 +77,9 @@ export const ROOMS: Room[] = [
   {
     key: "growth",
     label: "Growth",
-    what: "Reach and sales: playbooks, media buying, reports, replies to people and order cards.",
+    what: "Reach and sales: performance & profit, playbooks, media buying, reports, replies to people and order cards.",
     pages: [
+      ["/performance", "Performance"],
       ["/playbook", "Playbooks"],
       ["/ads", "Media buying"],
       ["/session", "Reports"],
@@ -337,6 +339,7 @@ export default function App() {
       case "/week": return <WeekPage />;
       case "/ads": return <AdsPage />;
       case "/playbook": return <PlaybookPage />;
+      case "/performance": return <PerformancePage />;
       case "/run": return <RunGuide />;
       case "/community": return <CommunityPage />;
       case "/orders": return <OrdersPage />;
