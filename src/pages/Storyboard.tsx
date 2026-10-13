@@ -480,7 +480,7 @@ function MotionCanvas({ slide, index, total, bpm, playing }: { slide: any; index
       const t0 = performance.now();
       if (playing) {
         ac = new AudioContext();
-        stop = startBeat(ac, ac.destination, bpm, seconds);
+        stop = startBeat(ac, ac.destination, bpm, seconds, ac.currentTime + 0.05, { counter: kind === "cover" && /\d/.test(s.en) });
       }
       const frame = () => {
         const t = playing ? (performance.now() - t0) / 1000 : seconds - 0.6;
