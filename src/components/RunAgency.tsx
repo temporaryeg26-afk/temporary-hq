@@ -4,13 +4,15 @@ import { Button, Copy, ErrorNote } from "./ui";
 import { DEFAULT_RUN, importWeek, parseWeek, RunConfig, weekCommand } from "../lib/week";
 
 const CHATGPT = "https://chatgpt.com/";
+const HOOK_CHECK = `You are TEMPORARY™'s hook critic. Score EVERY hook (slide 1 / frame 1 / clip 1 / static headline) 1–10 on: stops the scroll in under 1 second, curiosity gap, specific (not generic), fits a masked insider who gives real advice, natural Egyptian Masri. Rewrite anything under 9. Also check each carousel/video keeps one new idea per slide/clip and ends with a payoff + save/send ask. Keep all other fields and rules exactly. Answer with the improved JSON ONLY.\n\nJSON:\n`;
 
 /** RUN AGENCY: set the week, copy ONE command (to Claude or ChatGPT), paste the answer back, import. */
 export default function RunAgency() {
   const { brand, products } = useBrand();
   const [cfg, setCfg] = useState<RunConfig>(() => {
     try {
-      return { ...DEFAULT_RUN, ...JSON.parse(localStorage.getItem("hq.run") ?? "{}"), start: DEFAULT_RUN.start };
+      const saved = JSON.parse(localStorage.getItem("hq.run") ?? "{}");
+      return saved.v === 2 ? { ...DEFAULT_RUN, ...saved, start: DEFAULT_RUN.start } : DEFAULT_RUN;
     } catch {
       return DEFAULT_RUN;
     }
@@ -23,7 +25,7 @@ export default function RunAgency() {
     const n = { ...cfg, ...p };
     setCfg(n);
     try {
-      localStorage.setItem("hq.run", JSON.stringify({ ...n, start: undefined }));
+      localStorage.setItem("hq.run", JSON.stringify({ ...n, start: undefined, v: 2 }));
     } catch {
       /* private mode */
     }
@@ -92,7 +94,7 @@ export default function RunAgency() {
         {(Object.keys(cfg.package) as (keyof RunConfig["package"])[]).map((k) => (
           <label key={k} className="flex items-center gap-1.5">
             <input type="checkbox" checked={cfg.package[k]} onChange={(e) => set({ package: { ...cfg.package, [k]: e.target.checked } })} />
-            {k === "static" ? "Static post" : k === "carousel" ? "Motion carousel" : k === "stories" ? "Story set" : "Reel"}
+            {k === "static" ? "Static post" : k === "carousel" ? "Motion carousel" : k === "stories" ? "Story set" : k === "founder60" ? "Founder 60s video" : "Reel"}
           </label>
         ))}
       </div>
@@ -130,6 +132,7 @@ export default function RunAgency() {
         <textarea rows={4} value={answer} onChange={(e) => setAnswer(e.target.value)} className="mt-1 w-full font-mono text-xs" placeholder='{"week_theme": …, "items": [ … ]}' />
       </label>
       <div className="mt-2 flex flex-wrap items-center gap-3">
+        {answer.trim() && <Copy text={HOOK_CHECK + answer.trim()} label="Optional · Copy hook-check prompt (paste in ChatGPT, then paste its answer here)" />}
         <Button kind="primary" busy={busy} disabled={!answer.trim()} onClick={doImport}>
           3 · Import into HQ
         </Button>
