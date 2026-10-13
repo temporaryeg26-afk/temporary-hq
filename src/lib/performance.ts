@@ -1,7 +1,8 @@
 /**
  * PERFORMANCE — the paid-growth + profit system for TEMPORARY™ (from the owner's master brief).
  * Facts marked [source] were checked Oct 2026; everything marked HYPOTHETICAL is a planning example, not a forecast.
- * Supplier costs are INTERNAL. Never put them, margins or prices in content.
+ * PRIVATE: prices, supplier costs, margins and fees on this page are for the owner's math only.
+ * They are never put in posts, captions, stories, ads, DMs templates or ChatGPT packs.
  */
 
 export type Src = { label: string; url: string };
@@ -171,7 +172,7 @@ export const TERMS: Term[] = [
     example: "HYPOTHETICAL: 24 qualified → 10 confirmed → 8 completed = 33%.",
     measure: "DM log + order sheet + courier status.",
     poor: "Slow replies, no size chart, price surprise, delivery fee surprise, no online payment option, trust.",
-    action: "Reply < 15 min, saved replies with size chart + delivery fee 90 + delivery time, offer Paymob/InstaPay to cut COD refusals.",
+    action: "Reply < 15 min, saved replies with size chart + delivery time (prices/fees only when you choose to share them), offer Paymob/InstaPay to cut COD refusals.",
     sheet: "=IFERROR(CompletedOrders/QualifiedLeads,0)",
   },
   {
@@ -228,10 +229,10 @@ export const CREATIVES: { name: string; stage: string; audience: string; hook: s
   { name: "Fit & sizing", stage: "C", audience: "Profile visitors / DMs", hook: "«المقاس بالسنتي… مش S M L»", message: "Size chart in cm, model height + size worn.", visual: "Flat lay with ruler, on-body front/side.", copy: "Clear table, Arabic + English.", cta: "Find your size → DM", kpi: "Size questions in DMs (should drop)", hypothesis: "A cm size chart cuts size DMs and returns." },
   { name: "Styling & lifestyle", stage: "B–D", audience: "Engagers", hook: "«٣ طرق تلبس بيها نفس الهودي»", message: "How it fits a real Cairo life.", visual: "Street at night, Zamalek/New Cairo textures, no real locations' brands.", copy: "Minimal.", cta: "Which one is you?", kpi: "Comments + sends", hypothesis: "Styling raises perceived value without discounts." },
   { name: "Design story", stage: "B", audience: "Followers", hook: "«الرسمة دي ليها حكاية»", message: "Meaning behind the drop.", visual: "Sketch → print process.", copy: "Story in 3 lines.", cta: "Save", kpi: "Saves", hypothesis: "Story raises save rate on product posts." },
-  { name: "Drop announcement", stage: "D", audience: "Warm + followers", hook: "«٢٠٠ قطعة. مفيش restock.»", message: "Date, count, how to order, FOUNDER status.", visual: "Countdown, numbered tag 001/200.", copy: "Price shown, delivery 90 EGP shown.", cta: "Turn on notifications / order", kpi: "Orders in first 48h", hypothesis: "Real numbered scarcity converts without discount." },
+  { name: "Drop announcement", stage: "D", audience: "Warm + followers", hook: "«٢٠٠ قطعة. مفيش restock.»", message: "Date, count, how to order, FOUNDER status.", visual: "Countdown, numbered tag 001/200.", copy: "No prices or costs in the post — numbers only for edition size (001/200).", cta: "Turn on notifications / order", kpi: "Orders in first 48h", hypothesis: "Real numbered scarcity converts without discount." },
   { name: "Membership & archive", stage: "D–F", audience: "Warm + buyers", hook: "«FOUNDER ولا FOUNDER ELITE؟»", message: "1 piece from any Founder Drop = FOUNDER; 1 from each of the 3 = ELITE.", visual: "Member card, archive wall.", copy: "Simple rules, no fine print.", cta: "Which one will you be?", kpi: "Poll votes, repeat intent", hypothesis: "Membership raises multi-drop purchase intent." },
   { name: "Social proof (only when real)", stage: "C–E", audience: "Warm", hook: "Real customer photo/quote, with permission.", message: "Others received it and it's as promised.", visual: "UGC, unboxing.", copy: "Never invented.", cta: "Your turn", kpi: "Conversion rate of retargeting", hypothesis: "Real UGC lowers cost per order in retargeting." },
-  { name: "FAQ / objections", stage: "C–E", audience: "DM'd, didn't buy", hook: "«ليه أدفع ١٥٠٠ في هودي؟»", message: "Honest answers: price, delivery 90, payment, returns.", visual: "Clean Q&A carousel.", copy: "Answer exactly what DMs ask.", cta: "Still have a question? DM", kpi: "Lead → order rate", hypothesis: "Answering the top objection lifts conversion." },
+  { name: "FAQ / objections", stage: "C–E", audience: "DM'd, didn't buy", hook: "«إيه اللي يفرق قطعة عن قطعة؟»", message: "Honest answers: fabric, fit, delivery time, payment, returns — no prices or costs.", visual: "Clean Q&A carousel.", copy: "Answer exactly what DMs ask.", cta: "Still have a question? DM", kpi: "Lead → order rate", hypothesis: "Answering the top objection lifts conversion." },
 ];
 
 export const BUDGETS = [
