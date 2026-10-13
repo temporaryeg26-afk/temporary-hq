@@ -439,6 +439,20 @@ function WeekTools({ items, mediaOf }: { items: ContentItem[]; mediaOf: (id: str
       <button className="text-ultra hover:underline" disabled={!!busy} onClick={() => run("dl", async () => { for (const i of next) await downloadPiece(i, mediaOf(i.id)); })}>
         {busy === "dl" ? "Downloading…" : "Download all files"}
       </button>
+      <button
+        className="text-brick hover:underline"
+        disabled={!!busy}
+        onClick={() =>
+          confirm("Archive EVERYTHING in the grid and calendar for a fresh start? (archived, not deleted — restorable from All pieces)") &&
+          run("arch", async () => {
+            await mutate<ContentItem>(brand.id, "content", (d) => d.map((x) => (x.status === "rejected" ? x : { ...x, status: "rejected" as const, revision_note: `archived (was ${x.status})`, updated_at: now() })), "fresh start: archive all");
+            await log(brand.id, `${currentLogin()} archived all pieces for a fresh start.`);
+            location.reload();
+          })
+        }
+      >
+        {busy === "arch" ? "Archiving…" : "Archive all (fresh start)"}
+      </button>
       {waiting.length > 0 && (
         <button className="text-moss hover:underline" disabled={!!busy} onClick={() => run("ok", async () => { for (const i of waiting) await setStatus(brand.id, i, true, ""); location.reload(); })}>
           {busy === "ok" ? "Approving…" : `Approve all ${waiting.length}`}
@@ -496,7 +510,7 @@ function framesOf(item: ContentItem, media: Media[]): Frame[] {
       : item.format === "story"
       ? (o.frames ?? []).map((f: any) => f.text ?? "")
       : item.format === "founder_video"
-      ? (o.scenes ?? []).map((s: any) => s.on_screen_text || s.voiceover || "")
+      ? (o.clips ?? o.scenes ?? []).map((s: any) => s.on_screen_text || s.voiceover_ar || s.voiceover || "")
       : [o.headline ?? o.chosen_hook ?? ""];
   const n = Math.max(texts.length, media.length, 1);
   return Array.from({ length: n }, (_, i) => ({ media: media[i], text: texts[i] ?? "" }));
