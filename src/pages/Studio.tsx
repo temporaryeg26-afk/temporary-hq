@@ -6,6 +6,7 @@ import { currentLogin, downloadFile } from "../lib/github";
 import { list, mutate, now } from "../lib/store";
 import type { ContentItem, Media } from "../lib/types";
 import { missingJobs, renderPiece, RENDERABLE } from "../lib/render";
+import { promptsFor } from "../lib/prompts";
 
 /** Default Cairo posting times when the plan didn't set one. */
 const DEFAULT_TIME: Record<string, string> = { reel: "20:00", founder_video: "20:30", carousel: "13:00", motion_carousel: "14:00", static: "18:00", story: "21:00" };
@@ -41,7 +42,7 @@ export default function Studio({ view }: { view: View }) {
 
   return (
     <div>
-      {needDesign.length > 0 && <DesignBar items={needDesign} media={data.media} onDone={reload} />}
+      {/* auto-render off: you create assets in Claude / ChatGPT / Flow from the prompts */}
       {view === "calendar" && <Calendar items={data.items} onOpen={setOpen} />}
       {view === "grid" && <Grid items={data.items} mediaOf={mediaOf} onOpen={setOpen} />}
       {view === "approve" && <Approvals items={data.items} mediaOf={mediaOf} onChange={reload} />}
@@ -366,6 +367,24 @@ function PostActions({ item, media, onChange }: { item: ContentItem; media: Medi
           </button>
         )}
       </div>
+      {promptsFor(item).length > 0 && (
+        <div className="mt-3 border-t border-rule pt-3">
+          <p className="text-xs text-concrete">Make it: copy a prompt, paste it in the tool, then upload the result on the full piece page.</p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+            {promptsFor(item).map((p) => (
+              <span key={p.label} className="flex items-center gap-1.5">
+                <Copy text={p.text} label={`Copy: ${p.label}`} />
+                <a href={p.url} target="_blank" rel="noreferrer" className="text-xs text-concrete hover:text-plaster">
+                  open {p.tool} ↗
+                </a>
+              </span>
+            ))}
+            <a href={`#/content/${item.id}`} className="text-moss hover:underline">
+              Upload the result →
+            </a>
+          </div>
+        </div>
+      )}
       {item.status !== "published" && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {item.status !== "approved" && (
