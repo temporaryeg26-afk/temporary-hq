@@ -8,6 +8,7 @@ import { rewritePartPack } from "../lib/packs";
 import { list } from "../lib/store";
 import type { ContentItem, Media } from "../lib/types";
 import { drawMotion, logoBoxFor, motionFonts, startBeat, TEMPLATES } from "../lib/motion";
+import { renderPiece } from "../lib/render";
 
 const FLOW = "https://labs.google/fx/tools/flow";
 const words = (s: string) => (s ?? "").trim().split(/\s+/).filter(Boolean).length;
@@ -303,6 +304,7 @@ export function MotionPage({ id }: { id: string }) {
   const [note, setNote] = useState("");
   const [playing, setPlaying] = useState(false);
   const [cur, setCur] = useState(0);
+  const [rendering, setRendering] = useState<string | null>(null);
 
   useEffect(() => {
     if (data && !dirty) setO(data.item.output ?? null);
@@ -366,7 +368,31 @@ export function MotionPage({ id }: { id: string }) {
                 </button>
               ))}
             </div>
-            <p className="mt-1 text-xs text-concrete">Pick a look, press Save, then re-make the designs.</p>
+            <p className="mt-1 text-xs text-concrete">Pick a look, press Save, then render. Keep this tab in front while it renders (~1 min per slide).</p>
+            <div className="mt-2">
+              <Button
+                kind="primary"
+                busy={Boolean(rendering)}
+                disabled={dirty}
+                onClick={async () => {
+                  setErr(null);
+                  setRendering("Starting…");
+                  try {
+                    const n = await renderPiece(brand.id, data.item, (m) => setRendering(m));
+                    setRendering(null);
+                    setErr(null);
+                    await reload();
+                    alert(`Rendered ${n} slide${n === 1 ? "" : "s"} with the ${(o?.template ?? "cinematic")} template.`);
+                  } catch (e) {
+                    setRendering(null);
+                    setErr((e as Error).message);
+                  }
+                }}
+              >
+                {dirty ? "Save first, then render" : "Render this carousel"}
+              </Button>
+              {rendering && <p className="mt-1 text-xs text-moss">{rendering}</p>}
+            </div>
           </div>
           <div className="mt-3 flex items-center gap-2">
             <Button kind="primary" onClick={() => { setCur(0); setPlaying(true); }}>
