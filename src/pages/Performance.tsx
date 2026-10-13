@@ -177,7 +177,7 @@ export default function PerformancePage() {
       <section>
         <H id="profit">5 · Profitability & break-even</H>
         <p className="mt-3 max-w-3xl text-sm">Contribution per completed order = price − unit cost − embroidery − DTF − label − packaging − payment fee (prepaid share) − delivery we absorb − cost of refused COD parcels. Break-even ROAS = price ÷ contribution. Max CAC = contribution (spend more than that per order and you lose money).</p>
-        {missingCosts && <p className="mt-3 rounded-panel border border-ochre p-3 text-sm text-ochre">Unit costs are empty. Type the supplier's real price per piece for each product (plain garment, before print/embroidery). Until then break-even can't be calculated.</p>}
+        {missingCosts && <p className="mt-3 rounded-panel border border-ochre p-3 text-sm text-ochre">Unit costs are empty. Type the supplier's price per piece for each product. Tick "Print/emb extra?" only if DTF + embroidery are charged on top. Until then break-even can't be calculated.</p>}
         {sameAsPrice && <p className="mt-3 rounded-panel border border-red-500 p-3 text-sm text-red-400">Warning: a unit cost is equal to or higher than its selling price — every sale of that product loses money. Fix pricing or the cost before any paid conversion campaign.</p>}
         <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3 lg:grid-cols-5">
           {([
@@ -193,7 +193,7 @@ export default function PerformancePage() {
         <div className="mt-5 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="text-xs uppercase text-concrete">
-              <tr><th className="py-2 pr-3">Product</th><th className="pr-3">Price</th><th className="pr-3">Unit cost (supplier)</th><th className="pr-3">Print+emb+label+pack</th><th className="pr-3">Contribution / order</th><th className="pr-3">Break-even ROAS</th><th>Max CAC</th></tr>
+              <tr><th className="py-2 pr-3">Product</th><th className="pr-3">Price</th><th className="pr-3">Unit cost (supplier)</th><th className="pr-3">Extras</th><th className="pr-3">Print/emb extra?</th><th className="pr-3">Contribution / order</th><th className="pr-3">Break-even ROAS</th><th>Max CAC</th></tr>
             </thead>
             <tbody>
               {u.rows.map((r, i) => {
@@ -204,6 +204,7 @@ export default function PerformancePage() {
                     <td className="pr-3">{egp(r.price)}</td>
                     <td className="pr-3"><input type="number" placeholder="?" value={r.cost ?? ""} onChange={(e) => setCost(i, e.target.value)} className="w-24" /></td>
                     <td className="pr-3">{egp(m.extras)}</td>
+                    <td className="pr-3"><input type="checkbox" checked={r.emb || r.dtf} onChange={(e) => { const rows = u.rows.map((x, j) => (j === i ? { ...x, emb: e.target.checked, dtf: e.target.checked } : x)); setU({ ...u, rows }); setDirty(true); }} /></td>
                     <td className={`pr-3 ${m.contribution != null && m.contribution <= 0 ? "text-red-400" : ""}`}>{egp(m.contribution)}</td>
                     <td className="pr-3">{m.breakevenRoas ? m.breakevenRoas.toFixed(2) : m.contribution != null ? "never" : "—"}</td>
                     <td>{m.contribution != null ? egp(m.maxCac) : "—"}</td>
