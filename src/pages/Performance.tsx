@@ -76,7 +76,7 @@ export default function PerformancePage() {
     <div className="space-y-12">
       <header>
         <p className="text-sm text-concrete">
-          What this is: the paid-growth and profit system for TEMPORARY™ — funnel, every metric with its formula, break-even, budgets, the 30-day plan and how to judge any agency (including us). Supplier costs and margins on this page are internal — never in content.
+          What this is: the paid-growth and profit system for TEMPORARY™ — funnel, every metric with its formula, break-even, budgets, the 30-day plan and how to judge any agency (including us). PRIVATE: the prices, supplier costs and margins on this page are only for calculating profit and the most we can pay per customer. They never appear in posts, stories, ads or anything sent to ChatGPT.
         </p>
         <h1 className="wide mt-2 text-2xl font-semibold">Performance</h1>
         <nav className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
