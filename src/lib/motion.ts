@@ -5,11 +5,12 @@
  * Used live (preview with sound) and for recording each slide to MP4.
  */
 
-export type TemplateId = "cinematic" | "spin" | "cards" | "editorial" | "hud" | "split" | "receipt" | "blueprint" | "marquee" | "film";
+export type TemplateId = "luxury" | "cinematic" | "spin" | "cards" | "editorial" | "hud" | "split" | "receipt" | "blueprint" | "marquee" | "film";
 export type MotionSlide = { ar: string; en: string; seconds: number; index: number; total: number; kind?: "cover" | "check" | "end" | "plain"; template?: TemplateId };
 
 /** Motion templates (styles inspired by popular motion-graphic carousel formats; original designs). */
 export const TEMPLATES: { id: TemplateId; name: string; desc: string }[] = [
+  { id: "luxury", name: "Luxury chrome ★", desc: "Black, bone and chrome. Each slide acts out its point (scale, washer, loupe, tape, label). Founder on cover + last slide." },
   { id: "cinematic", name: "Cinematic thread", desc: "Black, red light leak, word slams, a red thread that runs across all slides." },
   { id: "spin", name: "Text spin", desc: "A giant ring of words rotating behind the headline." },
   { id: "cards", name: "3D cards", desc: "Tilted cards floating in depth behind the text." },
@@ -33,6 +34,7 @@ const SERIF = '"Instrument Serif"';
 export const PALETTE = { bg: "#090909", ink: "#F1ECE4", dim: "#7C766E", accent: "#E5574D", plate: "#EDE7DD" };
 
 export async function motionFonts() {
+  await luxFonts();
   await Promise.all([
     document.fonts.load(`700 120px ${AR}`),
     document.fonts.load(`500 40px ${AR}`),
@@ -97,11 +99,15 @@ function layerFor(ctx: CanvasRenderingContext2D, W: number, H: number) {
   return c;
 }
 
+import { drawLux, luxFonts, luxLogoBox, scoreLux } from "./motion-lux";
+export { topicOf } from "./motion-lux";
+
 /**
  * Draw one frame. time = seconds since the slide started; logoBox = where the real logo will be pasted
  * (a light plate goes under it so the dark logo stays readable on black).
  */
-export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, s: MotionSlide, time: number, bpm = BPM_DEFAULT, logoBox?: { x: number; y: number; w: number; h: number }) {
+export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, s: MotionSlide, time: number, bpm = BPM_DEFAULT, logoBox?: { x: number; y: number; w: number; h: number }, extras: { founder?: CanvasImageSource | null } = {}) {
+  if ((s.template ?? "luxury") === "luxury") return drawLux(ctx, W, H, s, time, logoBox, extras);
   const beat = 60 / bpm;
   const dur = Math.max(2, s.seconds);
   const pIn = clamp(time / 1.2);
@@ -110,7 +116,7 @@ export function drawMotion(ctx: CanvasRenderingContext2D, W: number, H: number, 
   const impact = 1 - clamp(time / 0.35); // the hit at the start of every slide
   const pad = W * 0.08;
   const cover = s.kind === "cover";
-  const T: TemplateId = s.template ?? "cinematic";
+  const T: TemplateId = s.template ?? "luxury";
   const P = T === "editorial" ? EDITORIAL : T === "blueprint" ? BLUEPRINT : T === "film" ? FILM : PALETTE;
   const INK = T === "editorial" ? "18,17,16" : T === "blueprint" ? "234,240,247" : "241,236,228";
 
@@ -833,7 +839,14 @@ export function startBeat(ac: AudioContext, out: AudioNode, bpm = BPM_DEFAULT, s
 }
 
 /** Where the logo goes (bottom-right, 14% width) — must match the overlay position used when exporting. */
-export function logoBoxFor(W: number, H: number, logoAspect: number) {
+/** Start the music for one slide (template-aware). Returns a stop function. */
+export function startScore(ac: AudioContext, out: AudioNode, s: MotionSlide, bpm = BPM_DEFAULT, startAt = ac.currentTime + 0.05) {
+  if ((s.template ?? "luxury") === "luxury") return scoreLux(ac, out, s, bpm, startAt);
+  return startBeat(ac, out, bpm, s.seconds, startAt, { counter: s.kind === "cover" && /\d/.test(s.en) });
+}
+
+export function logoBoxFor(W: number, H: number, logoAspect: number, template?: TemplateId) {
+  if ((template ?? "luxury") === "luxury") return luxLogoBox(W, H, logoAspect);
   const w = Math.round(W * 0.14);
   const h = Math.round(w / (logoAspect || 1));
   return { x: W - w - W * 0.05, y: H - h - H * 0.12, w, h };
@@ -846,14 +859,14 @@ export function mp4Mime() {
 }
 
 /** Record one slide. With `logo` (your original logo file) it is drawn on every frame, and the result is MP4 when the browser supports it. */
-export async function recordSlide(s: MotionSlide, W: number, H: number, logoAspect: number, bpm = BPM_DEFAULT, logo?: CanvasImageSource | null): Promise<Blob> {
+export async function recordSlide(s: MotionSlide, W: number, H: number, logoAspect: number, bpm = BPM_DEFAULT, logo?: CanvasImageSource | null, founder?: CanvasImageSource | null): Promise<Blob> {
   await motionFonts();
   const c = document.createElement("canvas");
   c.width = W;
   c.height = H;
   const ctx = c.getContext("2d")!;
-  const box = logoBoxFor(W, H, logoAspect);
-  drawMotion(ctx, W, H, s, 0, bpm, box);
+  const box = logoBoxFor(W, H, logoAspect, s.template);
+  drawMotion(ctx, W, H, s, 0, bpm, box, { founder });
   const ac = new AudioContext();
   // browsers only start audio after a real click — never hang waiting for it
   await Promise.race([ac.resume(), new Promise((r) => setTimeout(r, 1500))]);
@@ -867,12 +880,12 @@ export async function recordSlide(s: MotionSlide, W: number, H: number, logoAspe
   rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
   const done = new Promise<void>((res) => (rec.onstop = () => res()));
   rec.start(250);
-  const stop = startBeat(ac, dest, bpm, s.seconds, ac.currentTime + 0.05, { counter: s.kind === "cover" && /\d/.test(s.en) });
+  const stop = startScore(ac, dest, s, bpm, ac.currentTime + 0.05);
   const t0 = performance.now();
   await new Promise<void>((res) => {
     const tick = () => {
       const el = (performance.now() - t0) / 1000;
-      drawMotion(ctx, W, H, s, el, bpm, box);
+      drawMotion(ctx, W, H, s, el, bpm, box, { founder });
       if (logo) ctx.drawImage(logo, box.x, box.y, box.w, box.h);
       if (el >= s.seconds) return res();
       setTimeout(tick, 1000 / 30);

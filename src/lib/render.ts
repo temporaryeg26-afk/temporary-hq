@@ -3,8 +3,8 @@
  * right here in the browser (no AI image tool, so the Arabic text is always exact).
  * The real logo is pasted on top by composite() / overlayVideo() from your original file.
  */
-import { resolveOverlays } from "./assets";
-import { currentLogin, uploadFile } from "./github";
+import { loadAssets, resolveOverlays } from "./assets";
+import { currentLogin, downloadFile, uploadFile } from "./github";
 import { Aspect, bitmap, composite, SIZES } from "./media";
 import { mutate, newId, now } from "./store";
 import type { ContentItem, Media } from "./types";
@@ -231,6 +231,22 @@ export function missingJobs(item: ContentItem, media: Media[]): RenderJob[] {
  */
 const BPM_FOR = (item: ContentItem) => Number(item.output?.bpm) || 110;
 
+/** The masked Founder portrait from Assets (kind "mask", or any asset labelled founder / portrait). */
+let founderCache: { brandId: string; img: ImageBitmap | null } | null = null;
+export async function founderImage(brandId: string): Promise<ImageBitmap | null> {
+  if (founderCache?.brandId === brandId) return founderCache.img;
+  let img: ImageBitmap | null = null;
+  try {
+    const assets = await loadAssets(brandId);
+    const a = assets.find((x) => /founder|portrait|masked/i.test(x.label ?? "")) ?? assets.find((x) => x.kind === "mask");
+    if (a) img = await bitmap(await downloadFile(a.storage_path));
+  } catch {
+    img = null;
+  }
+  founderCache = { brandId, img };
+  return img;
+}
+
 export async function renderPiece(brandId: string, item: ContentItem, onStep?: (s: string) => void, only?: RenderJob[]) {
   const jobs = only ?? jobsFor(item);
   if (!jobs.length) return 0;
@@ -257,7 +273,7 @@ export async function renderPiece(brandId: string, item: ContentItem, onStep?: (
       const lo = (await retry(() => resolveOverlays(brandId, [logo], item.product_id), "Loading your logo")).overlays;
       const bm = lo[0] ? await bitmap(lo[0].file) : null;
       const kind = i === 0 ? "cover" : i === jobs.length - 1 && !only ? "end" : /check|اسأل|\d/.test(j.frame.text) ? "check" : "plain";
-      const webm = await recordSlide({ ar: j.frame.text, en: j.frame.en ?? "", seconds: j.frame.seconds ?? 5, index: j.frame.index ?? i, total: j.frame.total ?? jobs.length, kind: kind as any, template: (item.output?.template || "cinematic") as any }, 1080, 1350, bm ? bm.width / bm.height : 1, BPM_FOR(item), bm && mp4Mime() ? bm : null);
+      const webm = await recordSlide({ ar: j.frame.text, en: j.frame.en ?? "", seconds: j.frame.seconds ?? 5, index: j.frame.index ?? i, total: j.frame.total ?? jobs.length, kind: kind as any, template: (item.output?.template || "luxury") as any }, 1080, 1350, bm ? bm.width / bm.height : 1, BPM_FOR(item), bm && mp4Mime() ? bm : null, await founderImage(brandId));
       let mp4 = webm;
       if (!(bm && mp4Mime())) {
         // older browsers: convert + paste the logo with the video engine (slow)
