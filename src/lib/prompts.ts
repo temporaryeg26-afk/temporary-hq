@@ -44,27 +44,30 @@ Export: TEMPORARY_${item.scheduled_for}_01.mp4 … one per slide.`,
 
   if (item.format === "founder_video" && Array.isArray(o.clips) && o.clips.length) {
     const clips = o.clips as any[];
+    const sec = Number(clips[0]?.seconds) || 8;
+    const total = clips.reduce((a, c) => a + (Number(c.seconds) || sec), 0);
     out.push({
       tool: "Flow",
-      label: `Founder clips (${clips.length} × 10s) → Flow`,
+      label: `Founder clips (${clips.length} × ${sec}s) → Flow`,
       url: "https://labs.google/fx/tools/flow",
-      text: `Make ${clips.length} separate 10-second vertical 9:16 clips (one generation each) of the SAME character for TEMPORARY™. Attach the Founder PNG as the character reference for every clip.
+      text: `Make ${clips.length} separate ${sec}-second vertical 9:16 clips (one generation each) of the SAME character for TEMPORARY™. Attach the Founder PNG as the character reference for every clip.
 CHARACTER (identical in every clip): a man in a black oversized hoodie with a small white "TEMPORARY™" chest print, wearing a sculpted black-and-chrome geometric mask engraved with angular TEMPORARY lettering, silver rings, dark cinematic studio light. Calm, confident insider.
-${clips.map((c, i) => `\nCLIP ${i + 1} (10s): ${c.flow_prompt ?? ""}\nHe says (Egyptian Arabic): "${c.voiceover_ar ?? ""}"`).join("\n")}
+VOICE: he speaks his line in Egyptian Arabic (Masri) with the SAME calm, deep male voice in every clip; the mask covers his mouth, so no lip-sync is needed. If a clip comes out with wrong or unclear Arabic, regenerate that clip.
+${clips.map((c, i) => `\nCLIP ${i + 1} (${c.seconds ?? sec}s): ${c.flow_prompt ?? ""}\nHe says (Egyptian Arabic): "${c.voiceover_ar ?? ""}"`).join("\n")}
 
-No text or logos in the clips. ${RULES}`,
+No on-screen text, subtitles or logos in the clips (we add text after). ${RULES}`,
     });
     out.push({
       tool: "Claude",
-      label: "Combine into 60s video → Claude",
+      label: `Combine into ${total}s video → Claude`,
       url: "https://claude.ai/new",
-      text: `Combine my ${clips.length} attached Flow clips (in order) into ONE 60-second Instagram video for TEMPORARY™, 1080×1920 (9:16), MP4.
-- Burn in bold animated subtitles: Egyptian Arabic (right-to-left) + a smaller English line, synced to the Founder's voice.
+      text: `Combine my ${clips.length} attached Flow clips (in order) into ONE ${total}-second Instagram video for TEMPORARY™, 1080×1920 (9:16), MP4.
+- Burn in bold animated subtitles: Egyptian Arabic (right-to-left) + a smaller English line, synced to the Founder's voice that is already in the clips (keep his voice as the main audio).
 - Add kinetic on-screen text per clip, a subtle original music bed under his voice, quick cuts/zooms on key words, a progress feel so people stay to the end.
 ${hook}
 ${clips.map((c, i) => `Clip ${i + 1}: AR "${c.voiceover_ar ?? ""}" / EN "${c.voiceover_en ?? ""}" · on-screen: ${c.on_screen_text ?? ""}${c.on_screen_en ? ` / ${c.on_screen_en}` : ""}`).join("\n")}
 - Leave the bottom-right corner clean for our logo. ${LOOK} ${RULES}
-Export: TEMPORARY_${item.scheduled_for}_founder_60s.mp4`,
+Export: TEMPORARY_${item.scheduled_for}_founder.mp4`,
     });
   }
 
