@@ -134,6 +134,8 @@ export async function importWeek(brand: Brand, products: Product[], json: any, w
       ...(Array.isArray(it.scenes) ? { scenes: it.scenes.map((c: any, i: number) => ({ ...c, n: c.n ?? i + 1 })) } : {}),
     };
     const code = it.product_code ?? null;
+    const flags = checkRules(output, products as any, code);
+    const blocked = flags.some((f) => f.severity === "block");
     rows.push({
       id: newId(),
       plan_id: null,
@@ -144,11 +146,11 @@ export async function importWeek(brand: Brand, products: Product[], json: any, w
       scheduled_for: String(it.date ?? "").slice(0, 10),
       brief: { post_time: it.time, location: it.location ?? "Cairo, Egypt", week_theme: json.week_theme, made_by: writer, why: it.why, research: json.research ?? [], ads: it.ads ?? null, departments: it.departments ?? null },
       output,
-      rule_flags: checkRules(output, products as any, code),
+      rule_flags: flags,
       qa: null,
       review: null,
-      revision_note: null,
-      status: "needs_you",
+      revision_note: blocked ? `Sent back automatically by the doctrine check: ${flags.filter((f) => f.severity === "block").map((f) => f.rule).join(" · ")}` : null,
+      status: blocked ? "brief" : "needs_you",
       revisions: 0,
       created_at: now(),
       updated_at: now(),
