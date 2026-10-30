@@ -32,10 +32,10 @@ export const DEFAULT_GOAL: AgencyGoal = {
   target_low: 0.85,
   target_high: 0.9,
   sold: 0,
-  early_access_start: "2026-11-08",
-  early_access_end: "2026-11-10",
-  drop_start: "2026-11-20",
-  drop_end: "2026-11-26",
+  early_access_start: "2026-11-15",
+  early_access_end: "2026-11-17",
+  drop_start: "2026-11-27",
+  drop_end: "2026-12-03",
   ad_cap_egp: 5000,
   ad_spent_egp: 0,
 };
@@ -197,7 +197,7 @@ export type Briefing = { status: string; good: string[]; wrong: string[]; next: 
 type Agent = { key: AgentKey; name: string; title: string; room: string; expertise: string; checkIn: (s: Snapshot) => Briefing };
 
 const ALGO_2026 = `How Instagram ranks content now (2026): sends per reach (shares to DMs) weigh most, then watch time / completion, then saves; likes barely matter. A high skip rate in the first 1–2 seconds kills reach. Original content only (reposted / watermarked content is demoted, now also for photos and carousels). Max 5 hashtags; keywords in the caption matter for search. Trial Reels test content on non-followers first. Reels bring ~95% of this account's views. Profiles built around an AI-generated person must carry the "AI-generated profile" label or reach is limited.`;
-const PSYCH = `Buyer psychology we use (ethically): curiosity gaps that the content actually resolves; identity ("people like us wear this"); honest scarcity (a real number, never restocked); reciprocity (teach for free first); commitment ladder (follow → comment FOUNDER → DM → early access → order → Founder status); social proof only when real (never bought likes or fake reviews); loss aversion only when true ("the edition closes 26 Nov"). Egyptian Gen Z / millennials: Masri, humour, local references, mistrust of hype, love of local brands done right.`;
+const PSYCH = `Buyer psychology we use (ethically): curiosity gaps that the content actually resolves; identity ("people like us wear this"); honest scarcity (a real number, never restocked); reciprocity (teach for free first); commitment ladder (follow → comment FOUNDER → DM → early access → order → Founder status); social proof only when real (never bought likes or fake reviews); loss aversion only when true ("the edition closes on the last day of the drop"). Egyptian Gen Z / millennials: Masri, humour, local references, mistrust of hype, love of local brands done right.`;
 const BRAND_RULES = `TEMPORARY™ rules: premium limited Egyptian streetwear, dark/chrome identity, EVERYTHING IS TEMPORARY. Founder Drop 1 = 2 designs (KEEP IT REAL, TOO SMART FOR THIS WORLD) on tee / oversized / hoodie / crewneck, 200 pieces per design in total, never restocked, made to order (vendor 7 working days, delivery 10–14 days). Founder = 1 piece from any Founder Drop; Founder Elite = 1 piece from each of the 3; Member = buyer of a regular drop. Confirmed Founder perks: early access to the next drops + a private circle — nothing else may be promised. No discounts ever. Hashtag #temporary_eg. Never name competitors, never invent facts. The masked Founder is an AI character: AI label on, never claim he is filmed live.`;
 
 export const AGENTS: Record<AgentKey, Agent> = {
@@ -217,7 +217,7 @@ export const AGENTS: Record<AgentKey, Agent> = {
       const need = upcoming(s, 3).filter((c) => c.status === "needs_you");
       if (need.length) next.push({ text: `Approve ${need.length} piece(s) for the next 3 days`, href: "#/approve" });
       if (!upcoming(s, 7).length) { wrong.push("Nothing planned for the next 7 days."); next.push({ text: "Plan the next 7 days with the Content team", href: "#/calendar" }); }
-      if (ph === "pre-launch") next.push({ text: `${daysTo(s, g.early_access_start)} days to early access (${g.early_access_start}) — real sample photos due 4 Nov`, href: "#/content" });
+      if (ph === "pre-launch") next.push({ text: `${daysTo(s, g.early_access_start)} days to early access (${g.early_access_start}) — real sample photos needed 7 days before (detail shots for the teasers, then the reveal shoot)`, href: "#/content" });
       if (ph === "early access" || ph === "drop live") next.push({ text: "Answer FOUNDER DMs and abandoned bags today", href: "#/community" });
       if (g.ad_spent_egp > g.ad_cap_egp * 0.8) wrong.push(`Ad spend at ${g.ad_spent_egp} of ${g.ad_cap_egp} EGP — hold new spend unless a winner is proven.`);
       const waiting = s.pitches.filter((x) => x.status === "pitched"), approved = s.pitches.filter((x) => x.status === "approved");
@@ -312,7 +312,7 @@ export function ideasOf(key: AgentKey, s: Snapshot): PitchDraft[] {
     out.push({ title: `Boost our winner: "${(w.hook || w.topic).slice(0, 60)}"`, idea: "Cold test: 100–150 EGP/day for 3–5 days to Cairo/Giza/Alex 18–30, objective follows / profile visits. Stop at 2× target cost after 48h.", why: `It beat our average (${w.follows ?? "?"} follows, ${(w.saves ?? 0) + (w.shares ?? 0)} saves+shares). Paying only for proven content.`, impact: "~100–150 real follows at < 5 EGP each", cost_egp: 500, effort: "low" });
   }
   if (key === "growth" && wins.length) out.push({ title: "Repeat the winning mechanism with a new topic", idea: `Next Founder video uses the same hook type as "${(wins[0].hook || wins[0].topic).slice(0, 60)}" (number / contrast), new topic, plus a Trial Reel with a second hook.`, why: "Winners show what this audience sends and follows; the mechanism repeats, the topic must not.", impact: "Above-average follows per 1,000 views", cost_egp: 0, effort: "low" });
-  if (key === "community" && ph === "pre-launch") out.push({ title: "FOUNDER circle on Close Friends", idea: "Everyone who comments or DMs FOUNDER gets a personal DM and is added to Close Friends. Post 1–2 private stories a day for them (real details first, early-access link first on 8 Nov).", why: "Self-selected, real interest; a warm list converts far better than cold followers.", impact: "A countable list of buyers before 8 Nov", cost_egp: 0, effort: "medium" });
+  if (key === "community" && ph === "pre-launch") out.push({ title: "FOUNDER circle on Close Friends", idea: "Everyone who comments or DMs FOUNDER gets a personal DM and is added to Close Friends. Post 1–2 private stories a day for them (real details first, early-access link first when it opens).", why: "Self-selected, real interest; a warm list converts far better than cold followers.", impact: "A countable list of buyers before early access", cost_egp: 0, effort: "medium" });
   for (const play of playsFor(key, ph)) out.push({ title: play.length > 80 ? play.slice(0, 77) + "…" : play, idea: play, why: `Playbook for the ${ph} phase.`, impact: "Moves the phase goal", cost_egp: 0, effort: "medium" });
   const taken = new Set(s.pitches.map((p) => p.title));
   return out.filter((d) => !taken.has(d.title)).slice(0, 4);
