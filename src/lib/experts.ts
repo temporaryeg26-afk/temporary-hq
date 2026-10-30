@@ -19,7 +19,8 @@ export const TEAM_RULES = `HOW THE TEAM WORKS
 - You are a master of your craft: you know everything a top professional in your role knows in 2026, and you use the latest TEAM KNOWLEDGE below (it is updated weekly).
 - You always bring your OWN ideas: how to get more of the right followers, more customers and more profit. Pitch them to the Director with the reason, expected impact and cost.
 - Base every claim on HQ data or the team knowledge. If a number is missing, say so and say how to get it. Never invent facts, results, reviews, stock or perks.
-- Be direct and practical. The founder has little time: give steps, not essays.`;
+- Be direct and practical. The founder has little time: give steps, not essays.
+- ALL DEPARTMENTS WORK TOGETHER ON EVERY PIECE (standing rule): Content writes it; Growth adds an alternative hook for a Trial Reel + the metric to watch; Media Buying makes it ad-ready (funnel layer, objective, ad copy in Masri, test + stop rule — 9:16, hook burned in on frame 1, works muted, no prices); Community plans the replies/DMs; Brand checks it. Every piece and every pitch must say how it can be used in ads.`;
 
 type Expert = { mastery: string; frameworks: string; plays: Record<Phase, string[]>; kpis: string; pitches: string };
 
@@ -35,7 +36,7 @@ export const EXPERTS: Record<AgentKey, Expert> = {
       "pre-launch": ["Make the FOUNDER list the only goal: every post asks for FOUNDER; count it daily.", "Lock payment (Paymob) and test the full order flow 3 days before early access.", "Get real sample photos done before teasers; no AI for products.", "Decide the boost test: only for a Reel that beats our average."],
       "early access": ["Open on time; message the FOUNDER list first, in order.", "Daily: orders, pieces, sizes, design split; fix any checkout friction the same day.", "Post real proof only (orders packed, black bags) — never fake numbers."],
       countdown: ["Turn early buyers into content (real reactions, with permission).", "Retarget site visitors and bag abandoners before the public drop.", "Set the public-drop plan using the design/garment split from early access."],
-      "drop live": ["Daily pace check vs 85–90% target; push the winning design.", "Honest closing messages: the edition closes on 26 Nov and never comes back.", "Abandoned bags followed up within 24h."],
+      "drop live": ["Daily pace check vs 85–90% target; push the winning design.", "Honest closing messages: the edition closes on the last drop day and never comes back.", "Abandoned bags followed up within 24h."],
       "after the drop": ["Close publicly ('this edition is done').", "Delivery updates to keep trust; collect UGC with permission.", "Post-mortem: what to cut, keep, scale for Founder Drop 2."],
     },
     kpis: `Pieces sold vs 102–108; FOUNDER list size; site visits; conversion; cost per order (max ~100 EGP); ad spend vs 5,000 EGP cap.`,
@@ -53,7 +54,7 @@ export const EXPERTS: Record<AgentKey, Expert> = {
       "pre-launch": ["Teasers built from real sample close-ups; guess-the-design prompts.", "Founder videos that explain 200 / made-to-order / how early access works.", "Every caption ends with FOUNDER; stories use countdown + question stickers."],
       "early access": ["'It's open' Reel at opening time; how-to-order story with link.", "Real packing / black bag content; answers to the top questions."],
       countdown: ["Styling Reels per garment (tee / oversized / hoodie / crewneck).", "Buyer reactions (real, with permission)."],
-      "drop live": ["Daily drop Reel: design focus by demand; 'closes 26 Nov' honest reminder.", "Size / fit guide carousel."],
+      "drop live": ["Daily drop Reel: design focus by demand; honest 'edition closes' reminder.", "Size / fit guide carousel."],
       "after the drop": ["'This edition is done' post.", "Delivery and unboxing content; tease what's next without dates."],
     },
     kpis: `Hook hold (3-second views / skip rate), completion, sends per reach, saves, follows per 1,000 views, FOUNDER comments.`,
@@ -82,7 +83,7 @@ export const EXPERTS: Record<AgentKey, Expert> = {
 - TEST: 3 different concepts × ~100 EGP for 48h; keep the cheapest cost per follow (< 5 EGP) or cost per order (≤ 100 EGP; margin ~200 EGP).
 - STOP-LOSS: pause anything at 2× target after 48h. Refresh creative every 2–3 weeks or when frequency > 3.
 - Only promote proven organic winners; diversity of concept beats small variations.
-- Budget guard: total cap 5,000 EGP through 26 Nov; reserve ~60% for early access + drop week.`,
+- Budget guard: total cap 5,000 EGP for Founder Drop 1; reserve ~60% for early access + drop week.`,
     plays: {
       "pre-launch": ["Small cold test on the best Reel (100–150 EGP/day, 3–5 days) for real follows.", "Build warm audiences now (video viewers, engagers) for later."],
       "early access": ["Warm retargeting with the reveal + 'open now' creative.", "Hot: remind bag abandoners."],
@@ -101,7 +102,7 @@ export const EXPERTS: Record<AgentKey, Expert> = {
 - ABANDONED BAG: one friendly message within 24h, one reminder before the window closes. Never more.
 - Record every FOUNDER in HQ (Sales) so the Director can count the list.`,
     plays: {
-      "pre-launch": ["Reply to every FOUNDER comment by DM; add them to Close Friends.", "Private stories for the circle: real details first.", "Ask them to sign in on the website before 8 Nov."],
+      "pre-launch": ["Reply to every FOUNDER comment by DM; add them to Close Friends.", "Private stories for the circle: real details first.", "Ask them to sign in on the website before early access opens."],
       "early access": ["Send the link to the circle first; answer questions live.", "Confirm each order personally."],
       countdown: ["Ask early buyers for a photo/reaction (with permission)."],
       "drop live": ["Bag follow-ups within 24h; fast answers on sizes."],
@@ -145,6 +146,6 @@ export const KNOWLEDGE_SEED = [
   { area: "platform", finding: "On 28 Oct 2026 Instagram removed linking one Reel to another (existing links removed too).", use: "For series: number parts, name the next part in the caption, pin Part 1, group in a highlight.", source: "https://www.awarexone.com/research/instagram-reels-linking-removed", agents: ["content"] },
   { area: "platform", finding: "Broadcast channels (professional accounts): followers join from the profile or an invite link; subscribers get notified of new posts; polls, photos, voice notes, links; replies arrive as private DMs. Channels are not pushed by the algorithm — promote them in stories/bio.", use: "Option for the FOUNDER circle next to Close Friends: one place to announce the early-access link first.", source: "https://setsmart.io/blog/instagram-broadcast-channel", agents: ["community", "director"] },
   { area: "ads", finding: "Meta's Andromeda system (2026): creative is the targeting. Use few consolidated campaigns, broad audiences, and many conceptually different creatives (not small variations); refresh every 2–3 weeks; watch frequency above 3 on prospecting.", use: "Test 3 truly different concepts (Founder video, real product close-up, reveal) instead of 3 versions of one.", source: "https://segwise.ai/blog/meta-andromeda-update-creative-strategy-2026", agents: ["media"] },
-  { area: "launch", finding: "Small streetwear labels doing made-to-order drops: make the early-access list the only call to action before the drop, give list members a real early window, state the window and ship date clearly, close publicly and keep the promise, lead with design and story — not discounts.", use: "FOUNDER list = the only CTA this week; early access 8–10 Nov stated everywhere; 'edition closes 26 Nov'.", source: "https://ecommercefastlane.com/streetwear-drops-without-dead-stock/", agents: ["director", "community", "content", "brand"] },
+  { area: "launch", finding: "Small streetwear labels doing made-to-order drops: make the early-access list the only call to action before the drop, give list members a real early window, state the window and ship date clearly, close publicly and keep the promise, lead with design and story — not discounts.", use: "FOUNDER list = the only CTA this week; the early-access window and closing date stated everywhere.", source: "https://ecommercefastlane.com/streetwear-drops-without-dead-stock/", agents: ["director", "community", "content", "brand"] },
   { area: "market", finding: "Egyptian Gen Z buys local Instagram brands that express humour and identity (local phrases with a twist, pop-culture references); Instagram is the main sales channel for local streetwear.", use: "Use Masri wit and local references in captions/stories, carefully and on-brand.", source: "https://egyptianstreets.com/2025/06/03/how-egyptian-memes-became-a-fashion-language/", agents: ["content", "brand"] },
 ];
