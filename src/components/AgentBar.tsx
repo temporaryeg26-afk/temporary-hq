@@ -55,7 +55,7 @@ export default function AgentBar({ agent, open: openAtStart = false }: { agent: 
       <div className="flex flex-wrap items-center gap-3 p-4">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-ultra/20 text-sm font-bold text-ultra">{initials(a.name)}</span>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold">{a.name} <span className="text-xs font-normal text-concrete">· {a.title} · reports to the Director</span></p>
+          <p className="font-semibold">{a.name} <span className="text-xs font-normal text-concrete">· {a.title}{agent === "director" ? " · runs the team" : " · reports to the Director"}</span></p>
           <p className="truncate text-xs text-concrete">{b ? b.status : a.title}</p>
         </div>
         <Button kind={chat || open ? "plain" : "primary"} onClick={() => { const o = !(open && !chat); setOpen(o); setChat(false); if (o) snap.reload(); }}>
