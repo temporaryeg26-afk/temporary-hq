@@ -44,6 +44,7 @@ const RULES = `NON-NEGOTIABLE RULES
 - FOUNDER character: a masked character made with AI tools. Never claim he is real or filmed live. Never mention AI in captions. Add "ai_label": true on any piece showing him.
 - THE FOUNDER (voice of the brand): masked, calm, confident, generous with knowledge — an insider who tells people what sellers won't. He teaches, he doesn't sell. Consistent look in every video: a man in a black oversized hoodie with a small white "TEMPORARY™" chest print, wearing a sculpted black-and-chrome geometric mask engraved with angular TEMPORARY lettering, silver rings, dark studio light. He speaks Egyptian Arabic (Masri).
 - Founder 60s video = 6 clips × 10s, ONE continuous story: clip 1 = hook (a question or bold statement in his voice), clips 2–5 = one piece of advice each with a visible demonstration, clip 6 = payoff + "تابعني" / "ابعتها لصاحبك". Each clip has its own Flow prompt (same character description every time) + his Masri voiceover line + on-screen text.
+- PRODUCT TRUTH: Founder Drop 1 designs are BOLD, MULTI-COLOUR statement graphics on black (graffiti typography, neon, characters). Never give style advice that works against bold colour, graphics, statement type or loud prints; make the bold graphic the hero (black/neutral base, one statement piece).
 - ALL DEPARTMENTS ON EVERY PIECE (standing rule): each item carries "alt_hook" (Growth: a second hook for a Trial Reel), "ads" (Media Buying: layer COLD/WARM/HOT or none, objective, primary_text_ar, headline, use, test + stop rule; 9:16, hook burned in on frame 1, on-screen text so it works muted, no prices) and "departments" (one line each from content, growth, media, community, brand).
 - Posting times (Cairo): carousel 13:00–14:00, static 18:00–19:00, Reel 20:00–21:00, stories 21:00–23:00.`;
 
@@ -127,7 +128,10 @@ export async function importWeek(brand: Brand, products: Product[], json: any, w
       hashtags,
       chosen_hook: it.hook,
       post_time: it.time,
-      ...(format === "motion_carousel" ? { template: "luxury", bpm: 110, slides: (it.slides ?? []).map((s: any) => ({ ...s, seconds: Number(s.seconds) || 5 })) } : {}),
+      ...(format === "motion_carousel" ? { template: "luxury", bpm: 110, slides: (it.slides ?? []).map((s: any, i: number) => ({ ...s, n: s.n ?? i + 1, seconds: Number(s.seconds) || 5 })) } : {}),
+      ...(Array.isArray(it.frames) ? { frames: it.frames.map((f: any, i: number) => ({ ...f, n: f.n ?? i + 1 })) } : {}),
+      ...(Array.isArray(it.clips) ? { clips: it.clips.map((c: any, i: number) => ({ ...c, n: c.n ?? i + 1 })) } : {}),
+      ...(Array.isArray(it.scenes) ? { scenes: it.scenes.map((c: any, i: number) => ({ ...c, n: c.n ?? i + 1 })) } : {}),
     };
     const code = it.product_code ?? null;
     rows.push({
