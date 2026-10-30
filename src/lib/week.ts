@@ -44,6 +44,7 @@ const RULES = `NON-NEGOTIABLE RULES
 - FOUNDER character: a masked character made with AI tools. Never claim he is real or filmed live. Never mention AI in captions. Add "ai_label": true on any piece showing him.
 - THE FOUNDER (voice of the brand): masked, calm, confident, generous with knowledge — an insider who tells people what sellers won't. He teaches, he doesn't sell. Consistent look in every video: a man in a black oversized hoodie with a small white "TEMPORARY™" chest print, wearing a sculpted black-and-chrome geometric mask engraved with angular TEMPORARY lettering, silver rings, dark studio light. He speaks Egyptian Arabic (Masri).
 - Founder 60s video = 6 clips × 10s, ONE continuous story: clip 1 = hook (a question or bold statement in his voice), clips 2–5 = one piece of advice each with a visible demonstration, clip 6 = payoff + "تابعني" / "ابعتها لصاحبك". Each clip has its own Flow prompt (same character description every time) + his Masri voiceover line + on-screen text.
+- ALL DEPARTMENTS ON EVERY PIECE (standing rule): each item carries "alt_hook" (Growth: a second hook for a Trial Reel), "ads" (Media Buying: layer COLD/WARM/HOT or none, objective, primary_text_ar, headline, use, test + stop rule; 9:16, hook burned in on frame 1, on-screen text so it works muted, no prices) and "departments" (one line each from content, growth, media, community, brand).
 - Posting times (Cairo): carousel 13:00–14:00, static 18:00–19:00, Reel 20:00–21:00, stories 21:00–23:00.`;
 
 const SCHEMA = `ANSWER = ONE JSON object, nothing else:
@@ -71,7 +72,10 @@ const SCHEMA = `ANSWER = ONE JSON object, nothing else:
       "caption_ar": "Masri caption, line 1 = hook", "caption_en": "English caption",
       "hashtags_en": ["#…"], "hashtags_ar": ["#…"],
       "pinned_comment": "…", "cta": "…", "location": "Cairo, Egypt", "ai_label": false,
-      "why": "one line: why this will work"
+      "why": "one line: why this will work",
+      "alt_hook": "second hook for a Trial Reel",
+      "ads": { "layer": "COLD|WARM|HOT|none", "objective": "…", "primary_text_ar": "…", "headline": "…", "use": "…", "test": "budget, duration, stop rule" },
+      "departments": { "content": "…", "growth": "…", "media": "…", "community": "…", "brand": "…" }
     }
   ]
 }`;
@@ -134,7 +138,7 @@ export async function importWeek(brand: Brand, products: Product[], json: any, w
       pillar: (it.pillar ?? "discovery") as ContentItem["pillar"],
       title: String(it.title ?? it.hook ?? "Piece").slice(0, 140),
       scheduled_for: String(it.date ?? "").slice(0, 10),
-      brief: { post_time: it.time, location: it.location ?? "Cairo, Egypt", week_theme: json.week_theme, made_by: writer, why: it.why, research: json.research ?? [] },
+      brief: { post_time: it.time, location: it.location ?? "Cairo, Egypt", week_theme: json.week_theme, made_by: writer, why: it.why, research: json.research ?? [], ads: it.ads ?? null, departments: it.departments ?? null },
       output,
       rule_flags: checkRules(output, products as any, code),
       qa: null,
