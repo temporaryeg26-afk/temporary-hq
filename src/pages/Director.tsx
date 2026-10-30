@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useBrand } from "../App";
 import AgentBar from "../components/AgentBar";
+import { PitchBoard, TeamMeeting } from "../components/TeamBoard";
 import { Button, ErrorNote, PageHead, Panel, useAsync } from "../components/ui";
 import { AGENTS, AgentKey, daysTo, goalOf, loadSnapshot, phaseOf, progress } from "../lib/agencyos";
 import { saveBrand } from "../lib/data";
@@ -75,7 +76,10 @@ export default function Director() {
 
       <AgentBar agent="director" open />
 
-      <p className="mb-3 mt-8 text-xs uppercase tracking-wide text-concrete">Your team</p>
+      {s && <PitchBoard s={s} reload={snap.reload} />}
+      {s && <TeamMeeting s={s} reload={snap.reload} />}
+
+      <p className="mb-3 mt-8 text-xs uppercase tracking-wide text-concrete">Your team · everyone reports to the Director · open a tab to chat with them</p>
       <div className="grid gap-3 md:grid-cols-2">
         {TEAM.map(({ key, href }) => {
           const a = AGENTS[key], b = s ? a.checkIn(s) : null;
@@ -84,6 +88,7 @@ export default function Director() {
               <p className="font-semibold">{a.name} <span className="text-xs font-normal text-concrete">· {a.title}</span></p>
               <p className="mt-1 text-sm text-concrete">{b ? b.status : "…"}</p>
               {b && b.wrong[0] && <p className="mt-1 text-sm text-brick">! {b.wrong[0]}</p>}
+              {s && <p className="mt-1 text-xs text-ochre">{s.pitches.filter((x) => x.agent === key && x.status === "pitched").length} idea(s) pitched · {s.chat.filter((x) => x.agent === key).length} chat messages</p>}
             </a>
           );
         })}
