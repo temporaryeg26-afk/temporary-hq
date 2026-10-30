@@ -54,8 +54,12 @@ export async function loadProducts(brandId: string): Promise<Product[]> {
   return (await list<Product>(brandId, "products")).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
 }
 
+/** Content with its brand/doctrine checks re-run live, so every rule change applies to every piece at once. */
 export async function loadContent(brandId: string): Promise<ContentItem[]> {
-  return (await list<ContentItem>(brandId, "content")).sort((a, b) => (a.scheduled_for ?? "").localeCompare(b.scheduled_for ?? ""));
+  const [rows, products] = await Promise.all([list<ContentItem>(brandId, "content"), list<Product>(brandId, "products").catch(() => [] as Product[])]);
+  return rows
+    .map((r) => (r.output && r.status !== "published" && r.status !== "rejected" ? { ...r, rule_flags: checkRules(r.output, products as any, products.find((p) => p.id === r.product_id)?.code ?? null) } : r))
+    .sort((a, b) => (a.scheduled_for ?? "").localeCompare(b.scheduled_for ?? ""));
 }
 
 export async function loadResearch(brandId: string): Promise<Research[]> {
