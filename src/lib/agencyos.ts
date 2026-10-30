@@ -467,7 +467,7 @@ export function meetingPrompt(s: Snapshot) {
   return `${MISSION}
 
 WEEKLY TEAM MEETING OF TEMP. HQ. You play the whole team. Steps:
-1. RESEARCH (use web search): what changed in the last 7–14 days in the Instagram algorithm and features, Meta ads, Egyptian streetwear / Gen Z culture and trends, and drop/launch tactics. Only real, sourced facts.
+1. RESEARCH (use web search): what changed in the last 7–14 days in the Instagram algorithm and features, Meta ads, Egyptian streetwear / Gen Z culture and trends, drop/launch tactics, and what the top marketing, sales and media-buying voices are teaching now (e.g. Alex Hormozi, Sabri Suby, leading Meta media buyers). Only real, sourced facts.
 2. Each employee reviews the data below from their expertise and pitches 1–3 ideas to the Director to get more of the right followers, more customers and more profit.
 3. The Director writes a short summary: what went wrong, what changes, the 3 priorities for the week.
 
