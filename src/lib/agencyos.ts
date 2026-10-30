@@ -6,9 +6,10 @@
  * Memory (what we already did + results) and weekly numbers feed every employee, so nothing repeats
  * and every decision is based on real results.
  */
-import { list, insert, newId, now } from "./store";
+import { list, insert, mutate, newId, now } from "./store";
 import { loadAds, loadContent, log } from "./data";
 import type { AdRecord, Brand, ContentItem, Product } from "./types";
+import { brainOf, KNOWLEDGE_SEED, MISSION, playsFor, TEAM_RULES } from "./experts";
 
 // ------------------------------------------------------------------ goal & calendar
 
@@ -83,6 +84,10 @@ export type WeeklyEntry = {
 };
 
 export type AgentLog = { id: string; agent: AgentKey; question: string; answer: string; created_at: string };
+export type ChatMsg = { id: string; agent: AgentKey; role: "you" | "agent"; text: string; created_at: string };
+export type PitchStatus = "pitched" | "approved" | "rejected" | "done";
+export type Pitch = { id: string; agent: AgentKey; title: string; idea: string; why: string; impact: string; cost_egp: number; effort: "low" | "medium" | "high"; status: PitchStatus; note?: string; source: "check-in" | "chat" | "meeting"; created_at: string; decided_at?: string };
+export type Knowledge = { id: string; area: string; finding: string; use: string; source: string; agents: AgentKey[]; date: string; created_at: string };
 
 /** A post's quality per 1,000 views (the signals Instagram rewards: sends, saves, follows). */
 export function score(m: Pick<MemoryEntry, "views" | "saves" | "shares" | "follows">) {
@@ -114,16 +119,22 @@ export type Snapshot = {
   memory: MemoryEntry[];
   weekly: WeeklyEntry[];
   advice: AgentLog[];
+  chat: ChatMsg[];
+  pitches: Pitch[];
+  knowledge: Knowledge[];
   today: string;
 };
 
 export async function loadSnapshot(brand: Brand, products: Product[]): Promise<Snapshot> {
-  const [content, ads, memory, weekly, advice] = await Promise.all([
+  const [content, ads, memory, weekly, advice, chat, pitches, knowledge] = await Promise.all([
     loadContent(brand.id).catch(() => [] as ContentItem[]),
     loadAds(brand.id).catch(() => [] as AdRecord[]),
     list<MemoryEntry>(brand.id, "memory").catch(() => []),
     list<WeeklyEntry>(brand.id, "weekly").catch(() => []),
     list<AgentLog>(brand.id, "agentlog").catch(() => []),
+    list<ChatMsg>(brand.id, "chat").catch(() => []),
+    list<Pitch>(brand.id, "pitches").catch(() => []),
+    list<Knowledge>(brand.id, "knowledge").catch(() => []),
   ]);
   return {
     brand, products, goal: goalOf(brand),
@@ -131,6 +142,9 @@ export async function loadSnapshot(brand: Brand, products: Product[]): Promise<S
     ads, memory: memory.sort((a, b) => b.date.localeCompare(a.date)),
     weekly: weekly.sort((a, b) => b.week_of.localeCompare(a.week_of)),
     advice: advice.sort((a, b) => b.created_at.localeCompare(a.created_at)),
+    chat: chat.sort((a, b) => a.created_at.localeCompare(b.created_at)),
+    pitches: pitches.sort((a, b) => b.created_at.localeCompare(a.created_at)),
+    knowledge: knowledge.sort((a, b) => b.date.localeCompare(a.date) || b.created_at.localeCompare(a.created_at)),
     today: new Date().toISOString().slice(0, 10),
   };
 }
@@ -206,7 +220,14 @@ export const AGENTS: Record<AgentKey, Agent> = {
       if (ph === "pre-launch") next.push({ text: `${daysTo(s, g.early_access_start)} days to early access (${g.early_access_start}) — real sample photos due 4 Nov`, href: "#/content" });
       if (ph === "early access" || ph === "drop live") next.push({ text: "Answer FOUNDER DMs and abandoned bags today", href: "#/community" });
       if (g.ad_spent_egp > g.ad_cap_egp * 0.8) wrong.push(`Ad spend at ${g.ad_spent_egp} of ${g.ad_cap_egp} EGP — hold new spend unless a winner is proven.`);
-      return { status: `${ph.toUpperCase()} · goal ${g.goal_pieces} pieces · aim ${p.low}–${p.high} sold · ${g.sold} sold so far`, good, wrong, next: next.slice(0, 3) };
+      const waiting = s.pitches.filter((x) => x.status === "pitched"), approved = s.pitches.filter((x) => x.status === "approved");
+      if (waiting.length) wrong.push(`${waiting.length} idea(s) from the team are waiting for your decision.`);
+      if (approved.length) good.push(`${approved.length} approved idea(s) in progress.`);
+      const lastK = s.knowledge[0];
+      if (!lastK || daysTo(s, lastK.date) < -8) wrong.push("Team knowledge is older than a week — the Sunday team meeting should refresh it.");
+      const first: Briefing["next"] = approved.slice(0, 2).map((x) => ({ text: `Do: ${x.title} (${AGENTS[x.agent].name})`, href: "#/" }));
+      if (waiting.length) first.push({ text: `Decide on ${waiting.length} pitch(es) from the team`, href: "#/" });
+      return { status: `${ph.toUpperCase()} · goal ${g.goal_pieces} pieces · aim ${p.low}–${p.high} sold · ${g.sold} sold so far`, good, wrong, next: [...first, ...next].slice(0, 3) };
     },
   },
   content: {
@@ -278,22 +299,51 @@ export const AGENTS: Record<AgentKey, Agent> = {
   },
 };
 
-// ------------------------------------------------------------------ the "Ask" brief (paste into Claude / ChatGPT)
+// ------------------------------------------------------------------ ideas each employee pitches (no AI needed)
 
-export function askPrompt(key: AgentKey, s: Snapshot, question: string) {
-  const a = AGENTS[key], b = a.checkIn(s), g = s.goal, p = progress(s), avg = averages(s.memory);
+export type PitchDraft = { title: string; idea: string; why: string; impact: string; cost_egp: number; effort: Pitch["effort"] };
+
+/** The employee's own ideas for this phase, from their playbook + live data. Already-pitched titles are skipped. */
+export function ideasOf(key: AgentKey, s: Snapshot): PitchDraft[] {
+  const ph = phaseOf(s), out: PitchDraft[] = [];
+  const wins = s.memory.filter((m) => m.verdict === "winner");
+  if (key === "media" && wins.length && s.goal.ad_spent_egp < s.goal.ad_cap_egp) {
+    const w = wins[0];
+    out.push({ title: `Boost our winner: "${(w.hook || w.topic).slice(0, 60)}"`, idea: "Cold test: 100–150 EGP/day for 3–5 days to Cairo/Giza/Alex 18–30, objective follows / profile visits. Stop at 2× target cost after 48h.", why: `It beat our average (${w.follows ?? "?"} follows, ${(w.saves ?? 0) + (w.shares ?? 0)} saves+shares). Paying only for proven content.`, impact: "~100–150 real follows at < 5 EGP each", cost_egp: 500, effort: "low" });
+  }
+  if (key === "growth" && wins.length) out.push({ title: "Repeat the winning mechanism with a new topic", idea: `Next Founder video uses the same hook type as "${(wins[0].hook || wins[0].topic).slice(0, 60)}" (number / contrast), new topic, plus a Trial Reel with a second hook.`, why: "Winners show what this audience sends and follows; the mechanism repeats, the topic must not.", impact: "Above-average follows per 1,000 views", cost_egp: 0, effort: "low" });
+  if (key === "community" && ph === "pre-launch") out.push({ title: "FOUNDER circle on Close Friends", idea: "Everyone who comments or DMs FOUNDER gets a personal DM and is added to Close Friends. Post 1–2 private stories a day for them (real details first, early-access link first on 8 Nov).", why: "Self-selected, real interest; a warm list converts far better than cold followers.", impact: "A countable list of buyers before 8 Nov", cost_egp: 0, effort: "medium" });
+  for (const play of playsFor(key, ph)) out.push({ title: play.length > 80 ? play.slice(0, 77) + "…" : play, idea: play, why: `Playbook for the ${ph} phase.`, impact: "Moves the phase goal", cost_egp: 0, effort: "medium" });
+  const taken = new Set(s.pitches.map((p) => p.title));
+  return out.filter((d) => !taken.has(d.title)).slice(0, 4);
+}
+
+export async function pitch(brandId: string, agent: AgentKey, d: PitchDraft, source: Pitch["source"] = "check-in") {
+  const row: Pitch = { ...d, agent, id: newId(), status: "pitched", source, created_at: now() };
+  await insert(brandId, "pitches", row, `pitch from ${AGENTS[agent].name}: ${d.title}`);
+  return row;
+}
+export async function decide(brandId: string, id: string, status: PitchStatus, note = "") {
+  await mutate<Pitch>(brandId, "pitches", (rows) => rows.map((r) => (r.id === id ? { ...r, status, note: note || r.note, decided_at: now() } : r)), `pitch ${status}`);
+}
+export async function seedKnowledge(brandId: string) {
+  await insert(brandId, "knowledge", KNOWLEDGE_SEED.map((k) => ({ ...k, agents: k.agents as AgentKey[], id: newId(), date: "2026-10-30", created_at: now() })), "team knowledge: first research");
+}
+export async function addKnowledge(brandId: string, k: Omit<Knowledge, "id" | "created_at">) {
+  await insert(brandId, "knowledge", { ...k, id: newId(), created_at: now() }, `knowledge: ${k.finding.slice(0, 40)}`);
+}
+
+// ------------------------------------------------------------------ the chat brain (paste into Claude / ChatGPT)
+
+function dataBlock(s: Snapshot) {
+  const g = s.goal, p = progress(s), avg = averages(s.memory);
   const mem = s.memory.slice(0, 25).map((m) => `- ${m.date} ${m.format} · ${m.topic} · hook: ${m.hook || "—"} · views ${m.views ?? "?"} · saves ${m.saves ?? "?"} · shares ${m.shares ?? "?"} · follows ${m.follows ?? "?"}${m.boosted ? " · BOOSTED" : ""} · verdict ${m.verdict || "?"}${m.lesson ? ` · lesson: ${m.lesson}` : ""}`).join("\n");
-  const wk = s.weekly.slice(0, 4).map((w) => `- week of ${w.week_of}: followers ${w.followers}, views ${w.views}, profile visits ${w.profile_visits}, link clicks ${w.link_clicks}, saves ${w.saves}, shares ${w.shares}, follows ${w.new_follows}, FOUNDER DMs ${w.founder_dms}, site visits ${w.site_visits}, add-to-bag ${w.add_to_bag}, orders ${w.orders}, pieces ${w.pieces}, ad spend ${w.ad_spend}${w.notes ? ` (${w.notes})` : ""}`).join("\n");
+  const wk = s.weekly.slice(0, 4).map((w) => `- week of ${w.week_of}: followers ${w.followers}, views ${w.views}, profile visits ${w.profile_visits}, link taps ${w.link_clicks}, saves ${w.saves}, shares ${w.shares}, follows ${w.new_follows}, FOUNDER DMs ${w.founder_dms}, site visits ${w.site_visits}, add-to-bag ${w.add_to_bag}, orders ${w.orders}, pieces ${w.pieces}, ad spend ${w.ad_spend}${w.notes ? ` (${w.notes})` : ""}`).join("\n");
   const up = upcoming(s, 14).map((c) => `- ${c.scheduled_for} ${c.format} · ${c.title} · ${c.status}`).join("\n");
-  return `${a.expertise}
-
-TODAY: ${s.today} · PHASE: ${phaseOf(s)}
+  const pit = s.pitches.slice(0, 15).map((x) => `- [${x.status}] ${AGENTS[x.agent].name}: ${x.title}${x.note ? ` (Director note: ${x.note})` : ""}`).join("\n");
+  return `TODAY: ${s.today} · PHASE: ${phaseOf(s)}
 GOAL: Founder Drop 1 = ${g.goal_pieces} pieces; target 85–90% = ${p.low}–${p.high} sold. Sold so far: ${g.sold}. Early access ${g.early_access_start}–${g.early_access_end}; public drop ${g.drop_start}–${g.drop_end}. Ad cap ${g.ad_cap_egp} EGP, spent ${g.ad_spent_egp}.
 ACCOUNT AVERAGE: ${avg.savesShares.toFixed(1)} saves+shares and ${avg.follows.toFixed(1)} follows per 1,000 views.
-
-MY CHECK-IN SAYS: ${b.status}
-Good: ${b.good.join(" | ") || "—"}
-Wrong: ${b.wrong.join(" | ") || "—"}
 
 MEMORY — what we already posted and how it did (never repeat a topic or hook):
 ${mem || "- (empty)"}
@@ -304,7 +354,128 @@ ${wk || "- (no weekly numbers yet)"}
 PLANNED NEXT 14 DAYS:
 ${up || "- (nothing planned)"}
 
-THE FOUNDER ASKS: ${question || "What should we do this week to reach the goal? Be specific: what to stop, keep and change, and give me max 3 tasks for today."}
+TEAM PITCHES (latest):
+${pit || "- (none yet)"}`;
+}
 
-Answer in clear, simple English (Masri for any copy). Be honest about the gap; never invent numbers, claims or perks.`;
+function knowledgeFor(key: AgentKey | "all", s: Snapshot) {
+  const k = s.knowledge.filter((x) => key === "all" || key === "director" || x.agents.includes(key)).slice(0, key === "all" ? 30 : 15);
+  return k.map((x) => `- (${x.date}, ${x.area}) ${x.finding} → USE: ${x.use}${x.source ? ` [${x.source}]` : ""}`).join("\n") || "- (empty — rely on your own up-to-date expertise and say what should be researched)";
+}
+
+const REPLY_FORMAT = `REPLY FORMAT
+Answer the founder in clear, simple English (copy for posts in Masri). Short paragraphs or steps.
+If you have ideas for the Director (you should — that's your job), add at the very end:
+\`\`\`pitch
+[{"title":"short","idea":"what exactly to do","why":"evidence / reasoning","impact":"expected result","cost_egp":0,"effort":"low|medium|high"}]
+\`\`\`
+If you used a NEW fact from research that the team should remember, also add:
+\`\`\`knowledge
+[{"area":"algorithm|ads|market|trend|launch|platform|psychology","finding":"...","use":"how we use it","source":"url"}]
+\`\`\``;
+
+export function chatPrompt(key: AgentKey, s: Snapshot, history: ChatMsg[], message: string) {
+  const a = AGENTS[key], b = a.checkIn(s);
+  const hist = history.slice(-12).map((m) => `${m.role === "you" ? "FOUNDER" : a.name.toUpperCase()}: ${m.text}`).join("\n\n");
+  return `${MISSION}
+
+YOU ARE: ${a.name} — ${a.title} of TEMP. HQ.
+${a.expertise}
+
+${brainOf(key)}
+
+YOUR PLAYBOOK FOR THIS PHASE (${phaseOf(s)}):
+${playsFor(key, phaseOf(s)).map((x) => `- ${x}`).join("\n")}
+
+${TEAM_RULES}
+
+TEAM KNOWLEDGE (latest research — use it, and say if something looks outdated):
+${knowledgeFor(key, s)}
+
+YOUR CHECK-IN: ${b.status}
+Good: ${b.good.join(" | ") || "—"}
+Wrong: ${b.wrong.join(" | ") || "—"}
+
+${dataBlock(s)}
+
+OUR CONVERSATION SO FAR:
+${hist || "(new conversation)"}
+
+FOUNDER: ${message || "What should we do now to reach the goal? Bring me your best ideas."}
+
+${REPLY_FORMAT}`;
+}
+
+/** Kept for compatibility with older callers. */
+export const askPrompt = (key: AgentKey, s: Snapshot, question: string) => chatPrompt(key, s, [], question);
+
+function blocks(text: string, tag: string): any[] {
+  const out: any[] = [];
+  const re = new RegExp("```" + tag + "\\s*([\\s\\S]*?)```", "gi");
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) { try { const j = JSON.parse(m[1].trim()); out.push(...(Array.isArray(j) ? j : [j])); } catch { /* ignore bad block */ } }
+  return out;
+}
+
+/** Saves the employee's answer to the chat + any pitches and knowledge it contains. */
+export async function saveReply(brandId: string, key: AgentKey, question: string, answer: string) {
+  const pitches = blocks(answer, "pitch"), knowledge = blocks(answer, "knowledge");
+  const clean = answer.replace(/```(pitch|knowledge)[\s\S]*?```/gi, "").trim();
+  const t = now();
+  const msgs: ChatMsg[] = [];
+  if (question.trim()) msgs.push({ id: newId(), agent: key, role: "you", text: question.trim().slice(0, 4000), created_at: t });
+  msgs.push({ id: newId(), agent: key, role: "agent", text: clean.slice(0, 20000), created_at: new Date(Date.parse(t) + 1).toISOString() });
+  await insert(brandId, "chat", msgs, `chat with ${AGENTS[key].name}`);
+  if (pitches.length) await insert(brandId, "pitches", pitches.map((p) => normPitch(p, key, "chat")), `${pitches.length} pitch(es) from ${AGENTS[key].name}`);
+  if (knowledge.length) await insert(brandId, "knowledge", knowledge.map((k) => normKnow(k, [key])), `knowledge from ${AGENTS[key].name}`);
+  return { pitches: pitches.length, knowledge: knowledge.length };
+}
+
+const KEYS: AgentKey[] = ["director", "content", "growth", "media", "community", "brand"];
+const normPitch = (p: any, fallback: AgentKey, source: Pitch["source"]): Pitch => ({
+  id: newId(), agent: KEYS.includes(p.agent) ? p.agent : fallback, title: String(p.title ?? "Idea").slice(0, 140), idea: String(p.idea ?? ""), why: String(p.why ?? ""), impact: String(p.impact ?? ""),
+  cost_egp: Math.max(0, Number(p.cost_egp) || 0), effort: ["low", "medium", "high"].includes(p.effort) ? p.effort : "medium", status: "pitched", source, created_at: now(),
+});
+const normKnow = (k: any, agents: AgentKey[]): Knowledge => ({
+  id: newId(), area: String(k.area ?? "trend"), finding: String(k.finding ?? ""), use: String(k.use ?? ""), source: String(k.source ?? ""),
+  agents: Array.isArray(k.agents) ? k.agents.filter((x: any) => KEYS.includes(x)) : agents, date: String(k.date ?? new Date().toISOString().slice(0, 10)).slice(0, 10), created_at: now(),
+});
+
+// ------------------------------------------------------------------ the weekly team meeting (Sunday, scheduled Claude)
+
+export function meetingPrompt(s: Snapshot) {
+  const team = KEYS.map((k) => `### ${AGENTS[k].name} — ${AGENTS[k].title}\n${brainOf(k)}\nPlaybook now: ${playsFor(k, phaseOf(s)).join(" · ")}\nCheck-in: ${AGENTS[k].checkIn(s).status}`).join("\n\n");
+  return `${MISSION}
+
+WEEKLY TEAM MEETING OF TEMP. HQ. You play the whole team. Steps:
+1. RESEARCH (use web search): what changed in the last 7–14 days in the Instagram algorithm and features, Meta ads, Egyptian streetwear / Gen Z culture and trends, and drop/launch tactics. Only real, sourced facts.
+2. Each employee reviews the data below from their expertise and pitches 1–3 ideas to the Director to get more of the right followers, more customers and more profit.
+3. The Director writes a short summary: what went wrong, what changes, the 3 priorities for the week.
+
+THE TEAM:
+${team}
+
+${TEAM_RULES}
+
+CURRENT TEAM KNOWLEDGE (don't repeat these; add only new facts, flag outdated ones):
+${knowledgeFor("all", s)}
+
+${dataBlock(s)}
+
+ANSWER = ONE JSON object, nothing else:
+{"summary":"Director's summary in simple English","knowledge":[{"area":"…","finding":"…","use":"…","source":"url","agents":["content","growth"]}],"pitches":[{"agent":"content|growth|media|community|brand|director","title":"…","idea":"…","why":"…","impact":"…","cost_egp":0,"effort":"low|medium|high"}]}`;
+}
+
+export async function importMeeting(brandId: string, text: string) {
+  const t = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "");
+  const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if (a < 0 || b < 0) throw new Error("No JSON found.");
+  const j = JSON.parse(t.slice(a, b + 1));
+  const k = (j.knowledge ?? []).map((x: any) => normKnow(x, ["director"])).filter((x: Knowledge) => x.finding);
+  const p = (j.pitches ?? []).map((x: any) => normPitch(x, "director", "meeting"));
+  if (k.length) await insert(brandId, "knowledge", k, `team meeting: ${k.length} new facts`);
+  if (p.length) await insert(brandId, "pitches", p, `team meeting: ${p.length} pitches`);
+  if (j.summary) await insert(brandId, "chat", { id: newId(), agent: "director" as AgentKey, role: "agent" as const, text: `TEAM MEETING ${new Date().toISOString().slice(0, 10)}\n\n${j.summary}`, created_at: now() }, "team meeting summary");
+  await log(brandId, `Team meeting imported: ${k.length} new facts, ${p.length} pitches.`);
+  return { knowledge: k.length, pitches: p.length };
 }
