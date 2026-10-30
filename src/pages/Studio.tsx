@@ -232,6 +232,10 @@ function Approvals({ items, mediaOf, onChange }: { items: ContentItem[]; mediaOf
       setErr("Write what to change, so the team knows.");
       return;
     }
+    if (approve && item.rule_flags.some((f) => f.severity === "block")) {
+      setErr("The doctrine check found something that must be fixed first (see ⚑ above). Send it back with a note, or fix it in the piece.");
+      return;
+    }
     setBusy(true);
     setErr(null);
     try {
@@ -274,7 +278,7 @@ function Approvals({ items, mediaOf, onChange }: { items: ContentItem[]; mediaOf
             {item.rule_flags.length > 0 && (
               <ul className="mt-3 space-y-1 text-sm text-ochre">
                 {item.rule_flags.map((f, i) => (
-                  <li key={i}>⚑ {f.detail}</li>
+                  <li key={i} className={f.severity === "block" ? "text-brick" : ""}>⚑ {f.severity === "block" ? "Must fix — " : ""}{f.rule}: {f.detail}</li>
                 ))}
               </ul>
             )}
