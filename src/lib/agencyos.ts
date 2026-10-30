@@ -122,11 +122,14 @@ export type Snapshot = {
   chat: ChatMsg[];
   pitches: Pitch[];
   knowledge: Knowledge[];
+  intel: Record<string, string>[];
+  pains: Record<string, string>[];
+  trendlab: Record<string, string>[];
   today: string;
 };
 
 export async function loadSnapshot(brand: Brand, products: Product[]): Promise<Snapshot> {
-  const [content, ads, memory, weekly, advice, chat, pitches, knowledge] = await Promise.all([
+  const [content, ads, memory, weekly, advice, chat, pitches, knowledge, intel, pains, trendlab] = await Promise.all([
     loadContent(brand.id).catch(() => [] as ContentItem[]),
     loadAds(brand.id).catch(() => [] as AdRecord[]),
     list<MemoryEntry>(brand.id, "memory").catch(() => []),
@@ -135,6 +138,9 @@ export async function loadSnapshot(brand: Brand, products: Product[]): Promise<S
     list<ChatMsg>(brand.id, "chat").catch(() => []),
     list<Pitch>(brand.id, "pitches").catch(() => []),
     list<Knowledge>(brand.id, "knowledge").catch(() => []),
+    list<Record<string, string>>(brand.id, "intel").catch(() => []),
+    list<Record<string, string>>(brand.id, "pains").catch(() => []),
+    list<Record<string, string>>(brand.id, "trendlab").catch(() => []),
   ]);
   return {
     brand, products, goal: goalOf(brand),
@@ -145,6 +151,7 @@ export async function loadSnapshot(brand: Brand, products: Product[]): Promise<S
     chat: chat.sort((a, b) => a.created_at.localeCompare(b.created_at)),
     pitches: pitches.sort((a, b) => b.created_at.localeCompare(a.created_at)),
     knowledge: knowledge.sort((a, b) => b.date.localeCompare(a.date) || b.created_at.localeCompare(a.created_at)),
+    intel, pains, trendlab,
     today: new Date().toISOString().slice(0, 10),
   };
 }
@@ -198,7 +205,7 @@ type Agent = { key: AgentKey; name: string; title: string; room: string; experti
 
 const ALGO_2026 = `How Instagram ranks content now (2026): sends per reach (shares to DMs) weigh most, then watch time / completion, then saves; likes barely matter. A high skip rate in the first 1–2 seconds kills reach. Original content only (reposted / watermarked content is demoted, now also for photos and carousels). Max 5 hashtags; keywords in the caption matter for search. Trial Reels test content on non-followers first. Reels bring ~95% of this account's views. Profiles built around an AI-generated person must carry the "AI-generated profile" label or reach is limited.`;
 const PSYCH = `Buyer psychology we use (ethically): curiosity gaps that the content actually resolves; identity ("people like us wear this"); honest scarcity (a real number, never restocked); reciprocity (teach for free first); commitment ladder (follow → comment FOUNDER → DM → early access → order → Founder status); social proof only when real (never bought likes or fake reviews); loss aversion only when true ("the edition closes on the last day of the drop"). Egyptian Gen Z / millennials: Masri, humour, local references, mistrust of hype, love of local brands done right.`;
-const BRAND_RULES = `TEMPORARY™ rules: premium limited Egyptian streetwear, dark/chrome identity, EVERYTHING IS TEMPORARY. Founder Drop 1 = 2 designs (KEEP IT REAL: graffiti typography in blue/red with a faceless hooded figure; TOO SMART FOR THIS WORLD: neon green/magenta drip type with a Rottweiler in headphones blowing pink bubblegum) — bold, multi-colour statement graphics on black; never publish advice against bold colour, graphics or loud prints — on tee / oversized / hoodie / crewneck, 200 pieces per design in total, never restocked, made to order (vendor 7 working days, delivery 10–14 days). Founder = 1 piece from any Founder Drop; Founder Elite = 1 piece from each of the 3; Member = buyer of a regular drop. Confirmed Founder perks: early access to the next drops + a private circle — nothing else may be promised. No discounts ever. Hashtag #temporary_eg. Never name competitors, never invent facts. The masked Founder is an AI character: AI label on, never claim he is filmed live.`;
+const BRAND_RULES = `TEMPORARY™ rules: premium limited Egyptian streetwear, dark/chrome identity, EVERYTHING IS TEMPORARY. Founder Drop 1 = 2 designs (KEEP IT REAL: graffiti typography in blue/red with a faceless hooded figure; TOO SMART FOR THIS WORLD: neon green/magenta drip type with a Rottweiler in headphones blowing pink bubblegum) — bold, multi-colour statement graphics on black; never publish advice against bold colour, graphics or loud prints — on tee / oversized / hoodie / crewneck, 200 pieces per design in total, never restocked, made to order (vendor 7 working days, delivery 10–14 days). Founder = 1 piece from any Founder Drop; Founder Elite = 1 piece from each of the 3; Member = buyer of a regular drop. Confirmed Founder perks: early access to the next drops + a private circle — nothing else may be promised. No discounts ever. Returns: made to order, so exchange or refund only if a piece is defective or the wrong item was sent (no change-of-mind returns). Hashtag #temporary_eg. Never name competitors, never invent facts. The masked Founder is an AI character: AI label on, never claim he is filmed live.`;
 
 export const AGENTS: Record<AgentKey, Agent> = {
   director: {
@@ -223,6 +230,9 @@ export const AGENTS: Record<AgentKey, Agent> = {
       const waiting = s.pitches.filter((x) => x.status === "pitched"), approved = s.pitches.filter((x) => x.status === "approved");
       if (waiting.length) wrong.push(`${waiting.length} idea(s) from the team are waiting for your decision.`);
       if (approved.length) good.push(`${approved.length} approved idea(s) in progress.`);
+      const openPains = s.pains.filter((x) => x.status !== "answered");
+      if (openPains.length && s.today < g.early_access_start) wrong.push(`${openPains.length} customer pain(s) still unanswered before early access — e.g. "${openPains[0].pain}".`);
+      if (!s.intel.length) wrong.push("No competitor intel yet — load it in Growth → Competitors & ads.");
       const lastK = s.knowledge[0];
       if (!lastK || daysTo(s, lastK.date) < -8) wrong.push("Team knowledge is older than a week — the Sunday team meeting should refresh it.");
       const first: Briefing["next"] = approved.slice(0, 2).map((x) => ({ text: `Do: ${x.title} (${AGENTS[x.agent].name})`, href: "#/" }));
@@ -355,7 +365,16 @@ PLANNED NEXT 14 DAYS:
 ${up || "- (nothing planned)"}
 
 TEAM PITCHES (latest):
-${pit || "- (none yet)"}`;
+${pit || "- (none yet)"}
+
+COMPETITOR & ADS INTEL (internal — never name them in content):
+${s.intel.slice(0, 12).map((x) => `- ${x.name} (${x.tier}): works → ${x.what_works} | ads → ${x.ads} | for us → ${x.fit}`).join("\n") || "- (empty)"}
+
+CUSTOMER PAINS (must be answered):
+${s.pains.slice(0, 15).map((x) => `- [${x.status}] ${x.pain} → ${x.answer}`).join("\n") || "- (empty)"}
+
+TREND LAB:
+${s.trendlab.slice(0, 12).map((x) => `- [${x.status}] ${x.name} (${x.kind}): ${x.how}`).join("\n") || "- (empty)"}`;
 }
 
 function knowledgeFor(key: AgentKey | "all", s: Snapshot) {
@@ -462,8 +481,10 @@ ${knowledgeFor("all", s)}
 
 ${dataBlock(s)}
 
+ALSO (research duties): update the boards — new or changed competitor intel (check their Instagram and the Meta Ad Library, country Egypt), new customer complaints you found (forums, reviews, comments) with our answer, and trends to follow or formats to invent.
+
 ANSWER = ONE JSON object, nothing else:
-{"summary":"Director's summary in simple English","knowledge":[{"area":"…","finding":"…","use":"…","source":"url","agents":["content","growth"]}],"pitches":[{"agent":"content|growth|media|community|brand|director","title":"…","idea":"…","why":"…","impact":"…","cost_egp":0,"effort":"low|medium|high"}]}`;
+{"summary":"Director's summary in simple English","intel":[{"name":"brand","tier":"local streetwear|international drop brand|mass-market","positioning":"…","what_works":"…","ads":"…","fit":"how TEMPORARY uses it","source":"url","checked":"YYYY-MM-DD"}],"pains":[{"pain":"…","answer":"…","where":"…","status":"open","source":"url"}],"trends":[{"name":"…","kind":"invent (ours)|follow","what":"…","how":"…","metric":"…","status":"idea"}],"knowledge":[{"area":"…","finding":"…","use":"…","source":"url","agents":["content","growth"]}],"pitches":[{"agent":"content|growth|media|community|brand|director","title":"…","idea":"…","why":"…","impact":"…","cost_egp":0,"effort":"low|medium|high"}]}`;
 }
 
 export async function importMeeting(brandId: string, text: string) {
@@ -475,6 +496,22 @@ export async function importMeeting(brandId: string, text: string) {
   const p = (j.pitches ?? []).map((x: any) => normPitch(x, "director", "meeting"));
   if (k.length) await insert(brandId, "knowledge", k, `team meeting: ${k.length} new facts`);
   if (p.length) await insert(brandId, "pitches", p, `team meeting: ${p.length} pitches`);
+  const up = async (t: "intel" | "pains" | "trendlab", key: string, arr: any[]) => {
+    const rows = (arr ?? []).filter((x) => x && x[key]);
+    if (!rows.length) return 0;
+    await mutate<any>(brandId, t, (d) => {
+      for (const r of rows) {
+        const i = d.findIndex((x: any) => String(x[key]).toLowerCase() === String(r[key]).toLowerCase());
+        if (i >= 0) d[i] = { ...d[i], ...r, updated_at: now() };
+        else d.push({ ...r, id: newId(), created_at: now() });
+      }
+      return d;
+    }, `team meeting: ${rows.length} ${t}`);
+    return rows.length;
+  };
+  await up("intel", "name", j.intel);
+  await up("pains", "pain", j.pains);
+  await up("trendlab", "name", j.trends);
   if (j.summary) await insert(brandId, "chat", { id: newId(), agent: "director" as AgentKey, role: "agent" as const, text: `TEAM MEETING ${new Date().toISOString().slice(0, 10)}\n\n${j.summary}`, created_at: now() }, "team meeting summary");
   await log(brandId, `Team meeting imported: ${k.length} new facts, ${p.length} pitches.`);
   return { knowledge: k.length, pitches: p.length };
