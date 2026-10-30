@@ -28,6 +28,7 @@ import PerformancePage from "./pages/Performance";
 import Director from "./pages/Director";
 import MemoryPage from "./pages/Memory";
 import GrowthWeek from "./pages/GrowthWeek";
+import KnowledgePage from "./pages/Knowledge";
 import AgentBar from "./components/AgentBar";
 import type { AgentKey } from "./lib/agencyos";
 
@@ -54,7 +55,7 @@ type Room = { key: string; label: string; what: string; agent: AgentKey; pages: 
 
 /** The agency: 6 tabs, one employee each. Every old route still works — it just lives inside a tab now. */
 export const ROOMS: Room[] = [
-  { key: "director", label: "Director", agent: "director", what: "", pages: [["/", "Briefing"], ["/agency", "Run agency (write a week)"]] },
+  { key: "director", label: "Director", agent: "director", what: "", pages: [["/", "Briefing"], ["/knowledge", "Team knowledge"], ["/agency", "Run agency (write a week)"]] },
   {
     key: "content", label: "Content", agent: "content",
     what: "Everything that gets posted: calendar, the Instagram grid, approvals, this week's list and the prompts to make each piece.",
@@ -339,6 +340,7 @@ export default function App() {
       case "/agency": return <Home />;
       case "/memory": return <MemoryPage />;
       case "/growth-week": return <GrowthWeek />;
+      case "/knowledge": return <KnowledgePage />;
       default: return <Director />;
     }
   })();
