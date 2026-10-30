@@ -528,6 +528,34 @@ function Caption({ o }: { o: any }) {
           </Field>
         )}
       </div>
+      {o.alt_hook && (
+        <Field label="Growth · second hook for a Trial Reel">
+          <Text>{o.alt_hook}</Text>
+        </Field>
+      )}
+      {o.ads && o.ads.layer && o.ads.layer !== "none" && (
+        <Field label={`Media Buying · ad plan (${o.ads.layer})`}>
+          <div className="space-y-1 text-sm">
+            {o.ads.objective && <p><span className="text-concrete">Objective:</span> {o.ads.objective}</p>}
+            {o.ads.primary_text_ar && <p dir="auto"><span className="text-concrete">Ad text:</span> {o.ads.primary_text_ar}</p>}
+            {o.ads.headline && <p dir="auto"><span className="text-concrete">Headline:</span> {o.ads.headline}</p>}
+            {o.ads.audience && <p><span className="text-concrete">Audience:</span> {o.ads.audience}</p>}
+            {o.ads.use && <p><span className="text-concrete">Use:</span> {o.ads.use}</p>}
+            {o.ads.test && <p><span className="text-concrete">Test:</span> {o.ads.test}</p>}
+            {o.ads.spec && <p className="text-xs text-concrete">{o.ads.spec}</p>}
+          </div>
+        </Field>
+      )}
+      {o.ads && o.ads.layer === "none" && o.ads.use && (
+        <Field label="Media Buying"><Text>{o.ads.use}</Text></Field>
+      )}
+      {o.departments && (
+        <Field label="All departments">
+          <div className="space-y-1 text-sm">
+            {Object.entries(o.departments as Record<string, string>).map(([k, v]) => <p key={k}><span className="capitalize text-concrete">{k}:</span> {v}</p>)}
+          </div>
+        </Field>
+      )}
     </>
   );
 }
