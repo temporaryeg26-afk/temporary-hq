@@ -4,7 +4,7 @@
  */
 import { currentLogin, mutateJSON, readJSON } from "./github";
 
-export type Table = "products" | "assets" | "plans" | "content" | "media" | "research" | "activity" | "sessions" | "ads" | "periods" | "tasks" | "memory" | "weekly" | "agentlog" | "chat" | "pitches" | "knowledge";
+export type Table = "products" | "assets" | "plans" | "content" | "media" | "research" | "activity" | "sessions" | "ads" | "periods" | "tasks" | "memory" | "weekly" | "agentlog" | "chat" | "pitches" | "knowledge" | "intel" | "pains" | "trendlab";
 
 export const tablePath = (brandId: string, t: Table) => `${brandId}/${t}.json`;
 export const newId = () => crypto.randomUUID();
