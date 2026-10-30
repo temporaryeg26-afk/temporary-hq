@@ -25,6 +25,11 @@ import WeekPage from "./pages/Week";
 import AdsPage from "./pages/Ads";
 import OrdersPage from "./pages/Orders";
 import PerformancePage from "./pages/Performance";
+import Director from "./pages/Director";
+import MemoryPage from "./pages/Memory";
+import GrowthWeek from "./pages/GrowthWeek";
+import AgentBar from "./components/AgentBar";
+import type { AgentKey } from "./lib/agencyos";
 
 // ------------------------------------------------------------------ tiny hash router
 
@@ -45,67 +50,45 @@ type Ctx = { brand: Brand; products: Product[]; brands: Brand[]; email: string; 
 const BrandCtx = createContext<Ctx | null>(null);
 export const useBrand = () => useContext(BrandCtx)!;
 
-type Room = { key: string; label: string; what: string; pages: [string, string][] };
+type Room = { key: string; label: string; what: string; agent: AgentKey; pages: [string, string][] };
 
-/** The agency: 4 rooms + a small Library. Old routes all still work — they just live inside a room now. */
+/** The agency: 6 tabs, one employee each. Every old route still works — it just lives inside a tab now. */
 export const ROOMS: Room[] = [
-  { key: "home", label: "Home", what: "", pages: [["/", "Home"]] },
+  { key: "director", label: "Director", agent: "director", what: "", pages: [["/", "Briefing"], ["/agency", "Run agency (write a week)"]] },
   {
-    key: "studio",
-    label: "Studio",
-    what: "Everything that gets posted: calendar, the Instagram grid, approvals and this week's posting list.",
-    pages: [
-      ["/calendar", "Calendar"],
-      ["/grid", "Grid"],
-      ["/approve", "Approvals"],
-      ["/week", "This week"],
-      ["/content", "All pieces"],
-      ["/plan", "Plan"],
-    ],
+    key: "content", label: "Content", agent: "content",
+    what: "Everything that gets posted: calendar, the Instagram grid, approvals, this week's list and the prompts to make each piece.",
+    pages: [["/calendar", "Calendar"], ["/grid", "Grid"], ["/approve", "Approvals"], ["/week", "This week"], ["/content", "All pieces"], ["/plan", "Plan"]],
   },
   {
-    key: "strategy",
-    label: "Strategy",
-    what: "Where we are going and what we know: the period roadmap, research, the brand book and trends.",
-    pages: [
-      ["/period", "Roadmap"],
-      ["/research", "Research"],
-      ["/doctrine", "Brand book"],
-      ["/trends", "Trend radar"],
-    ],
+    key: "growth", label: "Growth", agent: "growth",
+    what: "What works and what doesn't: weekly numbers, memory of every post with its results, performance and research.",
+    pages: [["/growth-week", "Weekly numbers"], ["/memory", "Memory & results"], ["/performance", "Performance & profit"], ["/research", "Research"], ["/trends", "Trend radar"]],
   },
   {
-    key: "growth",
-    label: "Growth",
-    what: "Reach and sales: performance & profit, playbooks, media buying, reports, replies to people and order cards.",
-    pages: [
-      ["/performance", "Performance"],
-      ["/playbook", "Playbooks"],
-      ["/ads", "Media buying"],
-      ["/session", "Reports"],
-      ["/community", "Community & sales"],
-      ["/orders", "Order cards"],
-    ],
+    key: "media", label: "Media", agent: "media",
+    what: "Paid reach: the funnel (cold → warm → buyers), ad plans, budget and the playbooks.",
+    pages: [["/ads", "Media buying"], ["/playbook", "Playbooks"]],
+  },
+  {
+    key: "community", label: "Sales", agent: "community",
+    what: "People and money: DMs and replies, FOUNDER list, orders and reports.",
+    pages: [["/community", "Community & sales"], ["/orders", "Order cards"], ["/session", "Reports"]],
+  },
+  {
+    key: "brand", label: "Brand", agent: "brand",
+    what: "Who we are and how HQ runs: brand book, roadmap, run guide, files and settings.",
+    pages: [["/doctrine", "Brand book"], ["/period", "Roadmap"], ["/run", "Run guide"], ["/assets", "Assets"], ["/products", "Products"], ["/brands", "Brands"], ["/settings", "Settings"]],
   },
 ];
 
-export const LIBRARY: Room = {
-  key: "library",
-  label: "Library",
-  what: "How the agency runs, your files and settings.",
-  pages: [
-    ["/run", "Run guide"],
-    ["/assets", "Assets"],
-    ["/products", "Products"],
-    ["/brands", "Brands"],
-    ["/settings", "Settings"],
-  ],
-};
+/** Kept for old links. */
+export const LIBRARY: Room = ROOMS[5];
 
 const matches = (route: string, href: string) => (href === "/" ? route === "/" : route === href || route.startsWith(href + "/"));
 export function roomOf(route: string): Room {
   if (/^\/(film|motion)\//.test(route)) return ROOMS[1];
-  return [...ROOMS, LIBRARY].find((r) => r.pages.some(([h]) => matches(route, h))) ?? ROOMS[0];
+  return ROOMS.find((r) => r.pages.some(([h]) => matches(route, h))) ?? ROOMS[0];
 }
 
 function Shell({ children }: { children: ReactNode }) {
@@ -157,13 +140,7 @@ function Shell({ children }: { children: ReactNode }) {
                 ))}
               </select>
             )}
-            <a
-              href="#/run"
-              title="Library: assets, products, brands, settings"
-              className={`rounded-ctl border px-3 py-1.5 ${room.key === "library" ? "border-concrete text-plaster" : "border-rule text-concrete hover:text-plaster"}`}
-            >
-              Library
-            </a>
+
           </div>
         </div>
         {room.pages.length > 1 && (
@@ -185,6 +162,7 @@ function Shell({ children }: { children: ReactNode }) {
 
       <main className="mx-auto max-w-6xl px-4 py-8 md:px-8">
         {room.what && <p className="mb-5 text-sm text-concrete">{room.what}</p>}
+        {route !== "/" && <AgentBar key={room.agent} agent={room.agent} />}
         {children}
         <footer className="mt-16 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-rule pt-4 text-xs text-concrete">
           <span>@{email}</span>
@@ -208,9 +186,9 @@ function Shell({ children }: { children: ReactNode }) {
       </main>
 
       {/* phone: rooms at the bottom */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-rule bg-ash md:hidden" aria-label="Rooms">
+      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-6 border-t border-rule bg-ash md:hidden" aria-label="Rooms">
         {ROOMS.map((r) => (
-          <a key={r.key} href={`#${r.pages[0][0]}`} className={`py-3 text-center text-sm ${room.key === r.key ? "text-plaster" : "text-concrete"}`}>
+          <a key={r.key} href={`#${r.pages[0][0]}`} className={`py-3 text-center text-xs ${room.key === r.key ? "text-plaster" : "text-concrete"}`}>
             {r.label}
           </a>
         ))}
@@ -358,7 +336,10 @@ export default function App() {
       case "/products": return <ProductsPage />;
       case "/brands": return <BrandsPage />;
       case "/settings": return <SettingsPage />;
-      default: return <Home />;
+      case "/agency": return <Home />;
+      case "/memory": return <MemoryPage />;
+      case "/growth-week": return <GrowthWeek />;
+      default: return <Director />;
     }
   })();
 
