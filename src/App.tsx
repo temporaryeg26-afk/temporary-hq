@@ -29,6 +29,7 @@ import Director from "./pages/Director";
 import MemoryPage from "./pages/Memory";
 import GrowthWeek from "./pages/GrowthWeek";
 import KnowledgePage from "./pages/Knowledge";
+import Board from "./pages/Board";
 import AgentBar from "./components/AgentBar";
 import type { AgentKey } from "./lib/agencyos";
 
@@ -59,12 +60,12 @@ export const ROOMS: Room[] = [
   {
     key: "content", label: "Content", agent: "content",
     what: "Everything that gets posted: calendar, the Instagram grid, approvals, this week's list and the prompts to make each piece.",
-    pages: [["/calendar", "Calendar"], ["/grid", "Grid"], ["/approve", "Approvals"], ["/week", "This week"], ["/content", "All pieces"], ["/plan", "Plan"]],
+    pages: [["/calendar", "Calendar"], ["/grid", "Grid"], ["/approve", "Approvals"], ["/week", "This week"], ["/content", "All pieces"], ["/trendlab", "Trend lab"], ["/plan", "Plan"]],
   },
   {
     key: "growth", label: "Growth", agent: "growth",
     what: "What works and what doesn't: weekly numbers, memory of every post with its results, performance and research.",
-    pages: [["/growth-week", "Weekly numbers"], ["/memory", "Memory & results"], ["/performance", "Performance & profit"], ["/research", "Research"], ["/trends", "Trend radar"]],
+    pages: [["/growth-week", "Weekly numbers"], ["/memory", "Memory & results"], ["/intel", "Competitors & ads"], ["/performance", "Performance & profit"], ["/research", "Research"], ["/trends", "Trend radar"]],
   },
   {
     key: "media", label: "Media", agent: "media",
@@ -74,7 +75,7 @@ export const ROOMS: Room[] = [
   {
     key: "community", label: "Sales", agent: "community",
     what: "People and money: DMs and replies, FOUNDER list, orders and reports.",
-    pages: [["/community", "Community & sales"], ["/orders", "Order cards"], ["/session", "Reports"]],
+    pages: [["/pains", "Customer pains"], ["/community", "Community & sales"], ["/orders", "Order cards"], ["/session", "Reports"]],
   },
   {
     key: "brand", label: "Brand", agent: "brand",
@@ -341,6 +342,9 @@ export default function App() {
       case "/memory": return <MemoryPage />;
       case "/growth-week": return <GrowthWeek />;
       case "/knowledge": return <KnowledgePage />;
+      case "/intel": return <Board board="intel" />;
+      case "/pains": return <Board board="pains" />;
+      case "/trendlab": return <Board board="trendlab" />;
       default: return <Director />;
     }
   })();
