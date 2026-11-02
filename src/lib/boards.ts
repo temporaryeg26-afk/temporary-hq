@@ -66,6 +66,7 @@ export const BOARDS: Record<BoardKey, BoardDef> = {
       { key: "kind", label: "Follow or invent", kind: "select", options: ["invent (ours)", "follow"] },
       { key: "what", label: "What it is", kind: "long" },
       { key: "how", label: "How TEMPORARY does it", kind: "long" },
+      { key: "outlier", label: "Outlier × (vidIQ: how many times better than that account's usual — and the link)" },
       { key: "metric", label: "How we judge it" },
       { key: "status", label: "Status", kind: "select", options: ["idea", "planned", "testing", "ours", "dropped"] },
     ],

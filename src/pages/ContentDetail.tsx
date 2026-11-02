@@ -10,6 +10,7 @@ import { checkRules } from "../lib/rules";
 import { currentLogin, downloadFile, removeFiles, uploadFile } from "../lib/github";
 import { insert, list, mutate, newId, now, remove, update } from "../lib/store";
 import type { ContentItem, Media } from "../lib/types";
+import { methodChecks } from "../lib/methods";
 import { overlayVideo } from "../lib/video";
 
 const FLOW = "https://labs.google/fx/tools/flow";
@@ -206,6 +207,17 @@ export default function ContentDetail({ id }: { id: string }) {
               ))}
             </ul>
           </Panel>
+          {item.output && (
+            <Panel>
+              <h2 className="mb-2 font-semibold">Methods check</h2>
+              <ul className="space-y-1 text-sm">
+                {methodChecks({ ...item.output, title: item.title }, item.format).map((c, i) => (
+                  <li key={i} className={c.ok ? "text-moss" : "text-ochre"}>{c.ok ? "✓" : "○"} {c.label} <span className="text-xs text-concrete">· {c.who}</span></li>
+                ))}
+              </ul>
+              <a href="#/methods" className="mt-2 block text-xs text-ultra hover:underline">Content methods →</a>
+            </Panel>
+          )}
           {item.review && (
             <Panel>
               <h2 className="mb-1 font-semibold">Manager review · {aiName(item.review.by)}</h2>
@@ -534,6 +546,21 @@ function Caption({ o }: { o: any }) {
           </Field>
         )}
       </div>
+      {(o.alt_text || o.keywords || o.retention_method || o.intent || o.series || o.cover_text || o.distribution || o.repurpose) && (
+        <Field label="Content methods">
+          <div className="space-y-1 text-sm">
+            {o.series && <p><span className="text-concrete">Pillar:</span> {o.series}</p>}
+            {o.intent && <p><span className="text-concrete">Jab / right hook:</span> {o.intent}</p>}
+            {o.retention_method && <p><span className="text-concrete">Retention method:</span> {o.retention_method}</p>}
+            {o.cover_text && <p dir="auto"><span className="text-concrete">Cover text:</span> {o.cover_text}</p>}
+            {Array.isArray(o.keywords) && <p dir="auto"><span className="text-concrete">Search words:</span> {o.keywords.join(" · ")}</p>}
+            {o.alt_text && <div><span className="text-concrete">Alt text (Instagram → Advanced settings):</span><Block text={o.alt_text} /></div>}
+            {Array.isArray(o.repurpose) && <p dir="auto"><span className="text-concrete">Same shoot also makes:</span> {o.repurpose.join(" · ")}</p>}
+            {o.outlier_source && <p dir="auto"><span className="text-concrete">Based on:</span> {o.outlier_source}</p>}
+            {o.distribution && <p dir="auto"><span className="text-concrete">Post it:</span> {o.distribution}</p>}
+          </div>
+        </Field>
+      )}
       {o.alt_hook && (
         <Field label="Growth · second hook for a Trial Reel">
           <Text>{o.alt_hook}</Text>

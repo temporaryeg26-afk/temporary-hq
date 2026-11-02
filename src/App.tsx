@@ -31,6 +31,7 @@ import GrowthWeek from "./pages/GrowthWeek";
 import KnowledgePage from "./pages/Knowledge";
 import Board from "./pages/Board";
 import Council from "./pages/Council";
+import Methods from "./pages/Methods";
 import AgentBar from "./components/AgentBar";
 import type { AgentKey } from "./lib/agencyos";
 
@@ -61,7 +62,7 @@ export const ROOMS: Room[] = [
   {
     key: "content", label: "Content", agent: "content",
     what: "Everything that gets posted: calendar, the Instagram grid, approvals, this week's list and the prompts to make each piece.",
-    pages: [["/calendar", "Calendar"], ["/grid", "Grid"], ["/approve", "Approvals"], ["/week", "This week"], ["/content", "All pieces"], ["/trendlab", "Trend lab"], ["/plan", "Plan"]],
+    pages: [["/calendar", "Calendar"], ["/grid", "Grid"], ["/approve", "Approvals"], ["/week", "This week"], ["/content", "All pieces"], ["/methods", "Content methods"], ["/trendlab", "Trend lab"], ["/plan", "Plan"]],
   },
   {
     key: "growth", label: "Growth", agent: "growth",
@@ -346,6 +347,7 @@ export default function App() {
       case "/intel": return <Board board="intel" />;
       case "/pains": return <Board board="pains" />;
       case "/trendlab": return <Board board="trendlab" />;
+      case "/methods": return <Methods />;
       case "/council": return <Council />;
       case "/council/:id": return <Council id={id} />;
       default: return <Director />;
