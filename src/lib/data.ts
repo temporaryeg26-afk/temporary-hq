@@ -56,10 +56,37 @@ export async function loadProducts(brandId: string): Promise<Product[]> {
 
 /** Content with its brand/doctrine checks re-run live, so every rule change applies to every piece at once. */
 export async function loadContent(brandId: string): Promise<ContentItem[]> {
-  const [rows, products] = await Promise.all([list<ContentItem>(brandId, "content"), list<Product>(brandId, "products").catch(() => [] as Product[])]);
+  const [live, archive, products] = await Promise.all([list<ContentItem>(brandId, "content"), loadArchive(brandId), list<Product>(brandId, "products").catch(() => [] as Product[])]);
+  const ids = new Set(live.map((r) => r.id));
+  const rows = [...live, ...archive.filter((r) => !ids.has(r.id))];
   return rows
     .map((r) => (r.output && r.status !== "published" && r.status !== "rejected" ? { ...r, rule_flags: checkRules(r.output, products as any, products.find((p) => p.id === r.product_id)?.code ?? null) } : r))
     .sort((a, b) => (a.scheduled_for ?? "").localeCompare(b.scheduled_for ?? ""));
+}
+
+/**
+ * ARCHIVE — old rejected pieces live in small files (content_archive_1.json, _2 …) so content.json stays small
+ * and every save is fast, even on a slow connection. Nothing is deleted: archived pieces still show everywhere.
+ */
+const archivePath = (brandId: string, n: number) => `${brandId}/content_archive_${n}.json`;
+export async function loadArchive(brandId: string): Promise<ContentItem[]> {
+  const out: ContentItem[] = [];
+  for (let n = 1; n <= 60; n++) {
+    const { data, sha } = await readJSON<ContentItem[]>(archivePath(brandId, n), []).catch(() => ({ data: [] as ContentItem[], sha: null }));
+    if (!sha) break;
+    out.push(...data.map((r) => ({ ...r, archived: n })));
+  }
+  return out;
+}
+
+/** Bring an archived piece back into content.json so it can be edited, approved or posted again. */
+export async function restoreFromArchive(brandId: string, item: ContentItem) {
+  if (!item.archived) return;
+  const { archived, ...clean } = item;
+  await mutate<ContentItem>(brandId, "content", (d) => {
+    if (!d.some((x) => x.id === clean.id)) d.push({ ...clean, updated_at: now() });
+  }, `restore from archive: ${item.title}`);
+  await mutateJSON<ContentItem[]>(archivePath(brandId, archived), [], (d) => d.filter((x) => x.id !== item.id), `HQ (${currentLogin()}): restored "${item.title}" from archive`);
 }
 
 export async function loadResearch(brandId: string): Promise<Research[]> {

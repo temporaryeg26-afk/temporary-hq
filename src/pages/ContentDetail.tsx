@@ -3,7 +3,7 @@ import { go, useBrand } from "../App";
 import Composer from "../components/Composer";
 import { aiName, Button, Copy, ErrorNote, Loading, Panel, Status, Text, useAsync } from "../components/ui";
 import { resolveOverlays } from "../lib/assets";
-import { loadContent, log } from "../lib/data";
+import { loadContent, log, restoreFromArchive } from "../lib/data";
 import { Aspect, composite } from "../lib/media";
 import { imagePromptFor, videoPromptFor } from "../lib/packs";
 import { checkRules } from "../lib/rules";
@@ -67,6 +67,7 @@ export default function ContentDetail({ id }: { id: string }) {
     setBusy(key);
     setErr(null);
     try {
+      if (item.archived) await restoreFromArchive(brand.id, item);
       await fn();
       await reload();
     } catch (e) {

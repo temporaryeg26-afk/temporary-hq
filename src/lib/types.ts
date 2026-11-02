@@ -100,6 +100,8 @@ export type ContentItem = {
   revisions: number;
   /** Earlier outputs, newest first — restorable from the Studio preview. */
   versions?: { at: string; by: string; output: Record<string, any> }[];
+  /** Set when the piece lives in an archive file (content_archive_<n>.json) — old rejected pieces, kept but out of the way. */
+  archived?: number;
   created_at: string;
   updated_at: string;
 };

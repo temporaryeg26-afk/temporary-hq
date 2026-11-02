@@ -194,7 +194,9 @@ export async function mutateJSON<T>(path: string, fallback: T, fn: (d: T) => T |
     const { data, sha } = await readJSON<T>(path, fallback);
     const draft = structuredClone(data);
     const next = (fn(draft) ?? draft) as T;
-    const b64 = bytesToB64(new TextEncoder().encode(JSON.stringify(next, null, 1)));
+    // Small files stay readable; big ones are saved compact so uploads stay fast on slow connections.
+    const pretty = JSON.stringify(next, null, 1);
+    const b64 = bytesToB64(new TextEncoder().encode(pretty.length > 150_000 ? JSON.stringify(next) : pretty));
     try {
       const newSha = await put(path, b64, message, sha);
       cache.set(path, { sha: newSha, data: next });
