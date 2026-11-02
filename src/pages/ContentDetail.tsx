@@ -4,6 +4,7 @@ import Composer from "../components/Composer";
 import { aiName, Button, Copy, ErrorNote, Loading, Panel, Status, Text, useAsync } from "../components/ui";
 import { resolveOverlays } from "../lib/assets";
 import { loadContent, log, restoreFromArchive } from "../lib/data";
+import { recordPosted } from "../lib/posted";
 import { Aspect, composite } from "../lib/media";
 import { imagePromptFor, videoPromptFor } from "../lib/packs";
 import { checkRules } from "../lib/rules";
@@ -79,6 +80,7 @@ export default function ContentDetail({ id }: { id: string }) {
   const setStatus = (status: string, extra: Record<string, unknown> = {}) =>
     act(status, async () => {
       await update<ContentItem>(brand.id, "content", item.id, { status: status as ContentItem["status"], updated_at: now(), ...extra }, `${status}: ${item.title}`);
+      if (status === "published") await recordPosted(brand.id, item);
       await log(brand.id, `${currentLogin()} marked "${item.title}" as ${status.replace("_", " ")}.`);
     });
 

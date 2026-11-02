@@ -8,6 +8,7 @@ import { checkRules } from "./rules";
 import { list, mutate, newId, now } from "./store";
 import type { Brand, ContentItem, Flag, Product } from "./types";
 import { METHODS_RULE, VIDEO_RULE } from "./methods";
+import { loadPosted, postedBlock } from "./posted";
 
 // ------------------------------------------------------------------ the judges
 
@@ -187,12 +188,15 @@ ${rejected.length ? "Recently rejected: " + rejected.join(" | ") : ""}`;
 }
 
 export async function reviewPack(brand: Brand, products: Product[], subject: { item?: ContentItem | null; text?: string; kind?: string }) {
-  const reviews = await loadReviews(brand.id);
+  const [reviews, posted] = await Promise.all([loadReviews(brand.id), loadPosted(brand.id)]);
   const what = subject.item
     ? `CONTENT PIECE FROM TEMP. HQ (JSON):\n${JSON.stringify(publicPiece(subject.item), null, 1)}`
     : `SUBMISSION (${subject.kind || "work out the type"}):\n${subject.text ?? ""}`;
   return `${COUNCIL_SYSTEM(brand, products)}
 ${memoryOf(reviews)}
+
+${postedBlock(posted)}
+The Strategist and Creative Director must REJECT a piece (or rebuild it on a new idea) if it repeats anything above without a "repeat_reason".
 
 TODAY: ${new Date().toISOString().slice(0, 10)}. If you have web search, check current official Instagram/TikTok guidance where it changes the verdict; mark anything unverified.
 

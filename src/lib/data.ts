@@ -1,5 +1,6 @@
 import { currentLogin, mutateJSON, readJSON } from "./github";
 import { autofix, checkRules } from "./rules";
+import { loadPosted, repeatOf } from "./posted";
 import { insert, list, mutate, newId, now } from "./store";
 import type { Activity, AdRecord, Brand, ContentItem, Doctrine, Plan, Product, Period, Research, ResearchReport, ResearchType, Session, Task, TaskStatus } from "./types";
 
@@ -56,11 +57,18 @@ export async function loadProducts(brandId: string): Promise<Product[]> {
 
 /** Content with its brand/doctrine checks re-run live, so every rule change applies to every piece at once. */
 export async function loadContent(brandId: string): Promise<ContentItem[]> {
-  const [live, archive, products] = await Promise.all([list<ContentItem>(brandId, "content"), loadArchive(brandId), list<Product>(brandId, "products").catch(() => [] as Product[])]);
+  const [live, archive, products, posted] = await Promise.all([list<ContentItem>(brandId, "content"), loadArchive(brandId), list<Product>(brandId, "products").catch(() => [] as Product[]), loadPosted(brandId)]);
   const ids = new Set(live.map((r) => r.id));
   const rows = [...live, ...archive.filter((r) => !ids.has(r.id))];
   return rows
-    .map((r) => (r.output && r.status !== "published" && r.status !== "rejected" ? { ...r, rule_flags: checkRules(r.output, products as any, products.find((p) => p.id === r.product_id)?.code ?? null) } : r))
+    .map((r) => {
+      if (!r.output || r.status === "published" || r.status === "rejected") return r;
+      const flags = checkRules(r.output, products as any, products.find((p) => p.id === r.product_id)?.code ?? null);
+      // NO REPEATS: same idea as something already on Instagram → Must fix, unless it repeats on purpose (repeat_reason).
+      const rep = r.output.repeat_reason ? null : repeatOf(r, posted);
+      if (rep) flags.push({ severity: "block", rule: "Repeat: this idea was already posted", detail: `«${rep.p.hook || rep.p.topic}» (${rep.p.date || "posted"}). Change the topic — or, only to emphasise something important on purpose, add "repeat_reason" in Edit (JSON).` });
+      return { ...r, rule_flags: flags };
+    })
     .sort((a, b) => (a.scheduled_for ?? "").localeCompare(b.scheduled_for ?? ""));
 }
 

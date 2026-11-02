@@ -123,7 +123,7 @@ export const METHODS_RULE = `CONTENT METHODS (studied from the best — apply on
 - SOCIAL MEDIA EXAMINER: test one new native feature a week (stickers, Trial Reels, carousel music).`;
 
 /** Extra fields the week command asks for (kept in the piece's output). */
-export const METHODS_SCHEMA = `"keywords": ["3–5 search words people type, Masri + English"], "alt_text": "1–2 sentence description for Instagram alt text (Advanced settings)", "retention_method": "list|steps|story", "intent": "jab|right_hook", "series": "THE MATERIAL|THE DECISION|THE LIMIT|BUILDING THE DROP|THE CIRCLE", "cover_text": "3–5 words on the Reel cover", "repurpose": ["the other pieces cut from the same shoot"], "outlier_source": "the proven format it is based on, or 'ours'", "distribution": "where and how it is posted natively (IG, Trial Reel, TikTok, Shorts, story)"`;
+export const METHODS_SCHEMA = `"keywords": ["3–5 search words people type, Masri + English"], "alt_text": "1–2 sentence description for Instagram alt text (Advanced settings)", "retention_method": "list|steps|story", "intent": "jab|right_hook", "series": "THE MATERIAL|THE DECISION|THE LIMIT|BUILDING THE DROP|THE CIRCLE", "cover_text": "3–5 words on the Reel cover", "repurpose": ["the other pieces cut from the same shoot"], "outlier_source": "the proven format it is based on, or 'ours'", "distribution": "where and how it is posted natively (IG, Trial Reel, TikTok, Shorts, story)", "repeat_reason": "ONLY if it deliberately repeats an already-posted idea to emphasise something important — otherwise leave out"`;
 
 export type MethodCheck = { label: string; ok: boolean; who: string };
 

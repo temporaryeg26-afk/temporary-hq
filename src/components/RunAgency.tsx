@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { go, useBrand } from "../App";
-import { Button, Copy, ErrorNote } from "./ui";
+import { Button, Copy, ErrorNote, useAsync } from "./ui";
+import { loadPosted } from "../lib/posted";
 import { DEFAULT_RUN, importWeek, parseWeek, RunConfig, weekCommand } from "../lib/week";
 
 const CHATGPT = "https://chatgpt.com/";
@@ -30,7 +31,8 @@ export default function RunAgency() {
       /* private mode */
     }
   };
-  const cmd = weekCommand(cfg, brand, products);
+  const posted = useAsync(() => loadPosted(brand.id), [brand.id]);
+  const cmd = weekCommand(cfg, brand, products, posted.data ?? []);
   const perDay = Object.values(cfg.package).filter(Boolean).length;
 
   const doImport = async () => {

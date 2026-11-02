@@ -10,6 +10,7 @@ import { list, insert, mutate, newId, now } from "./store";
 import { loadAds, loadContent, log } from "./data";
 import type { AdRecord, Brand, ContentItem, Product } from "./types";
 import { brainOf, KNOWLEDGE_SEED, MISSION, playsFor, TEAM_RULES } from "./experts";
+import { loadPosted, Posted, postedBlock } from "./posted";
 
 // ------------------------------------------------------------------ goal & calendar
 
@@ -127,11 +128,12 @@ export type Snapshot = {
   intel: Record<string, string>[];
   pains: Record<string, string>[];
   trendlab: Record<string, string>[];
+  posted: Posted[];
   today: string;
 };
 
 export async function loadSnapshot(brand: Brand, products: Product[]): Promise<Snapshot> {
-  const [content, ads, memory, weekly, advice, chat, pitches, knowledge, intel, pains, trendlab] = await Promise.all([
+  const [content, ads, memory, weekly, advice, chat, pitches, knowledge, intel, pains, trendlab, posted] = await Promise.all([
     loadContent(brand.id).catch(() => [] as ContentItem[]),
     loadAds(brand.id).catch(() => [] as AdRecord[]),
     list<MemoryEntry>(brand.id, "memory").catch(() => []),
@@ -143,6 +145,7 @@ export async function loadSnapshot(brand: Brand, products: Product[]): Promise<S
     list<Record<string, string>>(brand.id, "intel").catch(() => []),
     list<Record<string, string>>(brand.id, "pains").catch(() => []),
     list<Record<string, string>>(brand.id, "trendlab").catch(() => []),
+    loadPosted(brand.id),
   ]);
   return {
     brand, products, goal: goalOf(brand),
@@ -153,7 +156,7 @@ export async function loadSnapshot(brand: Brand, products: Product[]): Promise<S
     chat: chat.sort((a, b) => a.created_at.localeCompare(b.created_at)),
     pitches: pitches.sort((a, b) => b.created_at.localeCompare(a.created_at)),
     knowledge: knowledge.sort((a, b) => b.date.localeCompare(a.date) || b.created_at.localeCompare(a.created_at)),
-    intel, pains, trendlab,
+    intel, pains, trendlab, posted,
     today: new Date().toISOString().slice(0, 10),
   };
 }
@@ -368,6 +371,8 @@ function dataBlock(s: Snapshot) {
   return `TODAY: ${s.today} · PHASE: ${phaseOf(s)}
 GOAL: Founder Drop 1 = ${g.goal_pieces} pieces; target 85–90% = ${p.low}–${p.high} sold. Sold so far: ${g.sold}. ${hasEarlyAccess(g) ? `Early access ${g.early_access_start}–${g.early_access_end}; ` : `NO early access. Reveal ${revealOf(g)}; `}drop ${g.drop_start}–${g.drop_end}. Ad cap ${g.ad_cap_egp} EGP, spent ${g.ad_spent_egp}.
 ACCOUNT AVERAGE: ${avg.savesShares.toFixed(1)} saves+shares and ${avg.follows.toFixed(1)} follows per 1,000 views.
+
+${postedBlock(s.posted)}
 
 MEMORY — what we already posted and how it did (never repeat a topic or hook):
 ${mem || "- (empty)"}
