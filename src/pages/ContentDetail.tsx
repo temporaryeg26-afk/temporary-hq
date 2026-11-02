@@ -101,6 +101,11 @@ export default function ContentDetail({ id }: { id: string }) {
                 Open storyboard
               </a>
             )}
+            {item.output && (
+              <a href={`#/council/${item.id}`} className="text-sm text-ultra hover:underline">
+                {o.council ? `Council: ${o.council.before ?? "?"} → ${o.council.after ?? "?"} · ${o.council.decision}` : "Send to the Council"}
+              </a>
+            )}
             {item.format === "motion_carousel" && item.output && (
               <a href={`#/motion/${item.id}`} className="text-sm text-ultra hover:underline">
                 Open motion board

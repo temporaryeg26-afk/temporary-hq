@@ -5,6 +5,7 @@
  */
 import { log } from "./data";
 import { checkRules } from "./rules";
+import { COUNCIL_RULE } from "./council";
 import { insert, newId, now } from "./store";
 import type { Brand, ContentItem, Product } from "./types";
 
@@ -46,6 +47,7 @@ const RULES = `NON-NEGOTIABLE RULES
 - Founder 60s video = 6 clips × 10s, ONE continuous story: clip 1 = hook (a question or bold statement in his voice), clips 2–5 = one piece of advice each with a visible demonstration, clip 6 = payoff + "تابعني" / "ابعتها لصاحبك". Each clip has its own Flow prompt (same character description every time) + his Masri voiceover line + on-screen text.
 - PRODUCT TRUTH: Founder Drop 1 designs are BOLD, MULTI-COLOUR statement graphics on black (graffiti typography, neon, characters). Never give style advice that works against bold colour, graphics, statement type or loud prints; make the bold graphic the hero (black/neutral base, one statement piece).
 - ALL DEPARTMENTS ON EVERY PIECE (standing rule): each item carries "alt_hook" (Growth: a second hook for a Trial Reel), "ads" (Media Buying: layer COLD/WARM/HOT or none, objective, primary_text_ar, headline, use, test + stop rule; 9:16, hook burned in on frame 1, on-screen text so it works muted, no prices) and "departments" (one line each from content, growth, media, community, brand).
+${COUNCIL_RULE}
 - Posting times (Cairo): carousel 13:00–14:00, static 18:00–19:00, Reel 20:00–21:00, stories 21:00–23:00.`;
 
 const SCHEMA = `ANSWER = ONE JSON object, nothing else:
@@ -76,7 +78,8 @@ const SCHEMA = `ANSWER = ONE JSON object, nothing else:
       "why": "one line: why this will work",
       "alt_hook": "second hook for a Trial Reel",
       "ads": { "layer": "COLD|WARM|HOT|none", "objective": "…", "primary_text_ar": "…", "headline": "…", "use": "…", "test": "budget, duration, stop rule" },
-      "departments": { "content": "…", "growth": "…", "media": "…", "community": "…", "brand": "…" }
+      "departments": { "content": "…", "growth": "…", "media": "…", "community": "…", "brand": "…" },
+      "council": { "score": 0-100, "weakest": "…", "fixed": "…" }
     }
   ]
 }`;

@@ -30,6 +30,7 @@ import MemoryPage from "./pages/Memory";
 import GrowthWeek from "./pages/GrowthWeek";
 import KnowledgePage from "./pages/Knowledge";
 import Board from "./pages/Board";
+import Council from "./pages/Council";
 import AgentBar from "./components/AgentBar";
 import type { AgentKey } from "./lib/agencyos";
 
@@ -56,7 +57,7 @@ type Room = { key: string; label: string; what: string; agent: AgentKey; pages: 
 
 /** The agency: 6 tabs, one employee each. Every old route still works — it just lives inside a tab now. */
 export const ROOMS: Room[] = [
-  { key: "director", label: "Director", agent: "director", what: "", pages: [["/", "Briefing"], ["/knowledge", "Team knowledge"], ["/agency", "Run agency (write a week)"]] },
+  { key: "director", label: "Director", agent: "director", what: "", pages: [["/", "Briefing"], ["/council", "The Council (5 judges)"], ["/knowledge", "Team knowledge"], ["/agency", "Run agency (write a week)"]] },
   {
     key: "content", label: "Content", agent: "content",
     what: "Everything that gets posted: calendar, the Instagram grid, approvals, this week's list and the prompts to make each piece.",
@@ -307,7 +308,7 @@ export default function App() {
   if (!ctx) return <p className="p-8 text-concrete">Opening HQ…</p>;
 
   const [path, id] = (() => {
-    const m = route.match(/^\/(content|film|motion)\/(.+)$/);
+    const m = route.match(/^\/(content|film|motion|council)\/(.+)$/);
     return m ? [`/${m[1]}/:id`, m[2]] : [route, ""];
   })();
 
@@ -345,6 +346,8 @@ export default function App() {
       case "/intel": return <Board board="intel" />;
       case "/pains": return <Board board="pains" />;
       case "/trendlab": return <Board board="trendlab" />;
+      case "/council": return <Council />;
+      case "/council/:id": return <Council id={id} />;
       default: return <Director />;
     }
   })();
