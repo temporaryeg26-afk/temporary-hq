@@ -3,7 +3,7 @@ import { useBrand } from "../App";
 import AgentBar from "../components/AgentBar";
 import { PitchBoard, TeamMeeting } from "../components/TeamBoard";
 import { Button, ErrorNote, PageHead, Panel, useAsync } from "../components/ui";
-import { AGENTS, AgentKey, daysTo, goalOf, loadSnapshot, phaseOf, progress } from "../lib/agencyos";
+import { AGENTS, AgentKey, daysTo, goalOf, loadSnapshot, phaseOf, progress, hasEarlyAccess, revealOf, sellStart } from "../lib/agencyos";
 import { saveBrand } from "../lib/data";
 
 const TEAM: { key: AgentKey; href: string }[] = [
@@ -47,7 +47,7 @@ export default function Director() {
         <Panel className="mb-6">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <p className="wide text-lg font-semibold">Founder Drop 1</p>
-            <p className="text-sm text-concrete">{phaseOf(s).toUpperCase()} · early access in {Math.max(0, daysTo(s, g.early_access_start))} days · drop in {Math.max(0, daysTo(s, g.drop_start))} days</p>
+            <p className="text-sm text-concrete">{phaseOf(s).toUpperCase()} · {hasEarlyAccess(g) ? `early access in ${Math.max(0, daysTo(s, g.early_access_start))} days` : `reveal in ${Math.max(0, daysTo(s, revealOf(g)))} days`} · drop in {Math.max(0, daysTo(s, g.drop_start))} days</p>
           </div>
           <div className="relative mt-4 h-4 overflow-hidden rounded-full bg-rule">
             <div className="absolute inset-y-0 left-0 bg-ultra" style={{ width: `${Math.min(100, p.pct * 100)}%` }} />
@@ -56,7 +56,7 @@ export default function Director() {
           <div className="mt-2 flex flex-wrap justify-between gap-2 text-sm">
             <span><b className="text-plaster">{g.sold}</b> <span className="text-concrete">of {g.goal_pieces} pieces sold</span></span>
             <span className="text-moss">Target: {p.low}–{p.high} pieces (85–90%)</span>
-            {s.today >= g.early_access_start && <span className={p.onTrack ? "text-moss" : "text-brick"}>{p.onTrack ? "On track" : `Behind — expected ${p.expectedByNow} by now`}</span>}
+            {s.today >= sellStart(g) && <span className={p.onTrack ? "text-moss" : "text-brick"}>{p.onTrack ? "On track" : `Behind — expected ${p.expectedByNow} by now`}</span>}
           </div>
           <div className="mt-4 flex flex-wrap items-end gap-3 text-sm">
             <label className="block">

@@ -19,8 +19,9 @@ export type AgencyGoal = {
   target_high: number; // 0.90
   sold: number; // updated by you or the weekly check-in
   sold_updated_at?: string;
-  early_access_start: string;
+  early_access_start: string; // if start > end there is NO early access
   early_access_end: string;
+  reveal?: string; // design reveal date
   drop_start: string;
   drop_end: string;
   ad_cap_egp: number;
@@ -28,14 +29,15 @@ export type AgencyGoal = {
 };
 
 export const DEFAULT_GOAL: AgencyGoal = {
-  goal_pieces: 120,
+  goal_pieces: 400, // 2 designs × 200 pieces
   target_low: 0.85,
   target_high: 0.9,
   sold: 0,
-  early_access_start: "2026-11-15",
-  early_access_end: "2026-11-17",
-  drop_start: "2026-11-27",
-  drop_end: "2026-12-03",
+  early_access_start: "2026-11-25", // no early access (start > end)
+  early_access_end: "2026-11-24",
+  reveal: "2026-11-23",
+  drop_start: "2026-11-25",
+  drop_end: "2026-11-30",
   ad_cap_egp: 5000,
   ad_spent_egp: 0,
 };
@@ -178,8 +180,19 @@ export async function saveAdvice(brandId: string, agent: AgentKey, question: str
 const days = (a: string, b: string) => Math.round((Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 86400000);
 export const daysTo = (s: Snapshot, d: string) => days(s.today, d);
 const upcoming = (s: Snapshot, n = 7) => s.content.filter((c) => c.scheduled_for >= s.today && days(s.today, c.scheduled_for) < n);
+/** Early access only exists when its start is on/before its end. */
+export const hasEarlyAccess = (g: AgencyGoal) => g.early_access_start <= g.early_access_end;
+/** First day anyone can buy. */
+export const sellStart = (g: AgencyGoal) => (hasEarlyAccess(g) ? g.early_access_start : g.drop_start);
+export const revealOf = (g: AgencyGoal) => g.reveal ?? sellStart(g);
 export const phaseOf = (s: Snapshot) => {
   const g = s.goal;
+  if (!hasEarlyAccess(g)) {
+    if (s.today < revealOf(g)) return "pre-launch";
+    if (s.today < g.drop_start) return "countdown";
+    if (s.today <= g.drop_end) return "drop live";
+    return "after the drop";
+  }
   if (s.today < g.early_access_start) return "pre-launch";
   if (s.today <= g.early_access_end) return "early access";
   if (s.today < g.drop_start) return "countdown";
@@ -191,9 +204,9 @@ export function progress(s: Snapshot) {
   const g = s.goal, low = Math.ceil(g.goal_pieces * g.target_low), high = Math.ceil(g.goal_pieces * g.target_high);
   const pct = g.goal_pieces ? s.goal.sold / g.goal_pieces : 0;
   // simple pace: share of the selling window already passed (early access + drop window)
-  const sellDays = days(g.early_access_start, g.drop_end) + 1;
-  const passed = Math.min(sellDays, Math.max(0, days(g.early_access_start, s.today) + 1));
-  const expectedByNow = s.today < g.early_access_start ? 0 : Math.round((low * passed) / sellDays);
+  const sellDays = days(sellStart(g), g.drop_end) + 1;
+  const passed = Math.min(sellDays, Math.max(0, days(sellStart(g), s.today) + 1));
+  const expectedByNow = s.today < sellStart(g) ? 0 : Math.round((low * passed) / sellDays);
   return { low, high, pct, expectedByNow, onTrack: s.goal.sold >= expectedByNow };
 }
 
@@ -205,7 +218,7 @@ type Agent = { key: AgentKey; name: string; title: string; room: string; experti
 
 const ALGO_2026 = `How Instagram ranks content now (2026): sends per reach (shares to DMs) weigh most, then watch time / completion, then saves; likes barely matter. A high skip rate in the first 1–2 seconds kills reach. Original content only (reposted / watermarked content is demoted, now also for photos and carousels). Max 5 hashtags; keywords in the caption matter for search. Trial Reels test content on non-followers first. Reels bring ~95% of this account's views. Profiles built around an AI-generated person must carry the "AI-generated profile" label or reach is limited.`;
 const PSYCH = `Buyer psychology we use (ethically): curiosity gaps that the content actually resolves; identity ("people like us wear this"); honest scarcity (a real number, never restocked); reciprocity (teach for free first); commitment ladder (follow → comment FOUNDER → DM → early access → order → Founder status); social proof only when real (never bought likes or fake reviews); loss aversion only when true ("the edition closes on the last day of the drop"). Egyptian Gen Z / millennials: Masri, humour, local references, mistrust of hype, love of local brands done right.`;
-const BRAND_RULES = `TEMPORARY™ rules: premium limited Egyptian streetwear, dark/chrome identity, EVERYTHING IS TEMPORARY. Founder Drop 1 = 2 designs (KEEP IT REAL: graffiti typography in blue/red with a faceless hooded figure; TOO SMART FOR THIS WORLD: neon green/magenta drip type with a Rottweiler in headphones blowing pink bubblegum) — bold, multi-colour statement graphics on black; never publish advice against bold colour, graphics or loud prints — on tee / oversized / hoodie / crewneck, 200 pieces per design in total, never restocked, made to order (vendor 7 working days, delivery 10–14 days). Founder = 1 piece from any Founder Drop; Founder Elite = 1 piece from each of the 3; Member = buyer of a regular drop. Confirmed Founder perks: early access to the next drops + a private circle — nothing else may be promised. No discounts ever. Returns: made to order, so exchange or refund only if a piece is defective or the wrong item was sent (no change-of-mind returns). Hashtag #temporary_eg. Never name competitors, never invent facts. The masked Founder is an AI character: AI label on, never claim he is filmed live.`;
+const BRAND_RULES = `TEMPORARY™ rules: premium limited Egyptian streetwear, dark/chrome identity, EVERYTHING IS TEMPORARY. Founder Drop 1 = 2 designs (KEEP IT REAL: graffiti typography in blue/red with a faceless hooded figure; TOO SMART FOR THIS WORLD: neon green/magenta drip type with a Rottweiler in headphones blowing pink bubblegum) — bold, multi-colour statement graphics on black; never publish advice against bold colour, graphics or loud prints — on tee / oversized / hoodie / crewneck, 200 pieces per design in total, never restocked, made to order (delivery days pending vendor confirmation — never promise a number). Founder Drop 1 goal: 400 pieces (2 designs × 200). CURRENT CAMPAIGN (overrides any older early-access step): NO early access; designs hidden until the reveal on 23 Nov; drop open to everyone 25–30 Nov (salary week); Black Friday 27 Nov = same price, no discount; last call 30 Nov. Retail prices = exactly the HQ product catalogue (e.g. regular tee 900, standard hoodie 1,300, premium hoodie 1,500, premium crewneck 1,400 EGP) — public from the reveal, never discounted. Hoodie: heavy fabric, clean hood with no drawstring. Every piece goes through the 5-judge Council (Director → The Council). Founder = 1 piece from any Founder Drop; Founder Elite = 1 piece from each of the 3; Member = buyer of a regular drop. Confirmed Founder perks: early access to the next drops + a private circle — nothing else may be promised. No discounts ever. Returns: made to order, so exchange or refund only if a piece is defective or the wrong item was sent (no change-of-mind returns). Hashtag #temporary_eg. Never name competitors, never invent facts. The masked Founder is an AI character: AI label on, never claim he is filmed live.`;
 
 export const AGENTS: Record<AgentKey, Agent> = {
   director: {
@@ -214,24 +227,25 @@ export const AGENTS: Record<AgentKey, Agent> = {
     checkIn: (s) => {
       const p = progress(s), g = s.goal, wrong: string[] = [], good: string[] = [], next: Briefing["next"] = [];
       const ph = phaseOf(s), w = s.weekly[0];
-      if (s.today >= g.early_access_start) (p.onTrack ? good : wrong).push(`Sales: ${g.sold} of ${g.goal_pieces} pieces (${Math.round(p.pct * 100)}%). Expected by now: ${p.expectedByNow}.`);
+      if (s.today >= sellStart(g)) (p.onTrack ? good : wrong).push(`Sales: ${g.sold} of ${g.goal_pieces} pieces (${Math.round(p.pct * 100)}%). Expected by now: ${p.expectedByNow}.`);
       if (!w || daysTo(s, w.week_of) < -8) { wrong.push("No weekly numbers this week — I'm flying blind."); next.push({ text: "Log this week's Instagram numbers (or let the Chrome check-in do it)", href: "#/growth-week" }); }
       else {
-        if (w.orders === 0 && s.today >= g.early_access_start) wrong.push(`Visits but no orders last week (${w.site_visits} visits). Check price clarity, sizes and checkout.`);
+        if (w.orders === 0 && s.today >= sellStart(g)) wrong.push(`Visits but no orders last week (${w.site_visits} visits). Check price clarity, sizes and checkout.`);
         if (w.founder_dms > 0) good.push(`${w.founder_dms} FOUNDER DMs last week — real buyers raising their hand.`);
         if (w.views && w.new_follows / Math.max(1, w.views) * 1000 < 5) wrong.push("Follows per 1,000 views are low — hooks get views but don't make people follow.");
       }
       const need = upcoming(s, 3).filter((c) => c.status === "needs_you");
       if (need.length) next.push({ text: `Approve ${need.length} piece(s) for the next 3 days`, href: "#/approve" });
       if (!upcoming(s, 7).length) { wrong.push("Nothing planned for the next 7 days."); next.push({ text: "Plan the next 7 days with the Content team", href: "#/calendar" }); }
-      if (ph === "pre-launch") next.push({ text: `${daysTo(s, g.early_access_start)} days to early access (${g.early_access_start}) — real sample photos needed 7 days before (detail shots for the teasers, then the reveal shoot)`, href: "#/content" });
+      if (ph === "pre-launch" && !hasEarlyAccess(g)) next.push({ text: `${daysTo(s, revealOf(g))} days to the reveal (${revealOf(g)}), ${daysTo(s, g.drop_start)} to the drop (${g.drop_start}) — post real sample footage every day, design hidden until the reveal`, href: "#/content" });
+      if (ph === "pre-launch" && hasEarlyAccess(g)) next.push({ text: `${daysTo(s, g.early_access_start)} days to early access (${g.early_access_start}) — real sample photos needed 7 days before (detail shots for the teasers, then the reveal shoot)`, href: "#/content" });
       if (ph === "early access" || ph === "drop live") next.push({ text: "Answer FOUNDER DMs and abandoned bags today", href: "#/community" });
       if (g.ad_spent_egp > g.ad_cap_egp * 0.8) wrong.push(`Ad spend at ${g.ad_spent_egp} of ${g.ad_cap_egp} EGP — hold new spend unless a winner is proven.`);
       const waiting = s.pitches.filter((x) => x.status === "pitched"), approved = s.pitches.filter((x) => x.status === "approved");
       if (waiting.length) wrong.push(`${waiting.length} idea(s) from the team are waiting for your decision.`);
       if (approved.length) good.push(`${approved.length} approved idea(s) in progress.`);
       const openPains = s.pains.filter((x) => x.status !== "answered");
-      if (openPains.length && s.today < g.early_access_start) wrong.push(`${openPains.length} customer pain(s) still unanswered before early access — e.g. "${openPains[0].pain}".`);
+      if (openPains.length && s.today < sellStart(g)) wrong.push(`${openPains.length} customer pain(s) still unanswered before the drop — e.g. "${openPains[0].pain}".`);
       if (!s.intel.length) wrong.push("No competitor intel yet — load it in Growth → Competitors & ads.");
       const lastK = s.knowledge[0];
       if (!lastK || daysTo(s, lastK.date) < -8) wrong.push("Team knowledge is older than a week — the Sunday team meeting should refresh it.");
@@ -287,13 +301,13 @@ export const AGENTS: Record<AgentKey, Agent> = {
   },
   community: {
     key: "community", name: "Community & Sales", title: "DMs, buyers & Founders", room: "community",
-    expertise: `You are TEMPORARY™'s community and sales manager. You answer DMs in warm, confident Masri within the hour, move people up the ladder (follow → FOUNDER → early access → order), recover abandoned bags politely (one email + one WhatsApp, never pushy), collect real UGC with permission, and keep the Founder / Founder Elite / Member records right. Never promise perks beyond early access + private circle; never invent stock or delivery claims (made to order, 10–14 days). ${BRAND_RULES}`,
+    expertise: `You are TEMPORARY™'s community and sales manager. You answer DMs in warm, confident Masri within the hour, move people up the ladder (follow → comment 23 / FOUNDER → DM + Close Friends → reveal reminder → order on drop day), recover abandoned bags politely (one email + one WhatsApp, never pushy), collect real UGC with permission, and keep the Founder / Founder Elite / Member records right. Never promise perks beyond early access + private circle; never invent stock or delivery claims (made to order; delivery days are being confirmed with the vendor — never promise a number until HQ says so). ${BRAND_RULES}`,
     checkIn: (s) => {
       const w = s.weekly[0], g = s.goal, next: Briefing["next"] = [], good: string[] = [], wrong: string[] = [];
       if (w) good.push(`Last week: ${w.founder_dms} FOUNDER DMs · ${w.add_to_bag} add-to-bag · ${w.orders} orders.`);
       if (w && w.add_to_bag > w.orders) wrong.push(`${w.add_to_bag - w.orders} bags not turned into orders — follow up today.`);
       next.push({ text: "Answer FOUNDER comments & DMs (ready replies)", href: "#/community" });
-      if (s.today >= g.early_access_start) next.push({ text: "Check new orders and send to the vendor the same day", href: "#/orders" });
+      if (s.today >= sellStart(g)) next.push({ text: "Check new orders and send to the vendor the same day", href: "#/orders" });
       return { status: `Phase: ${phaseOf(s)} · ${g.sold} pieces sold`, good, wrong, next };
     },
   },
@@ -352,7 +366,7 @@ function dataBlock(s: Snapshot) {
   const up = upcoming(s, 14).map((c) => `- ${c.scheduled_for} ${c.format} · ${c.title} · ${c.status}`).join("\n");
   const pit = s.pitches.slice(0, 15).map((x) => `- [${x.status}] ${AGENTS[x.agent].name}: ${x.title}${x.note ? ` (Director note: ${x.note})` : ""}`).join("\n");
   return `TODAY: ${s.today} · PHASE: ${phaseOf(s)}
-GOAL: Founder Drop 1 = ${g.goal_pieces} pieces; target 85–90% = ${p.low}–${p.high} sold. Sold so far: ${g.sold}. Early access ${g.early_access_start}–${g.early_access_end}; public drop ${g.drop_start}–${g.drop_end}. Ad cap ${g.ad_cap_egp} EGP, spent ${g.ad_spent_egp}.
+GOAL: Founder Drop 1 = ${g.goal_pieces} pieces; target 85–90% = ${p.low}–${p.high} sold. Sold so far: ${g.sold}. ${hasEarlyAccess(g) ? `Early access ${g.early_access_start}–${g.early_access_end}; ` : `NO early access. Reveal ${revealOf(g)}; `}drop ${g.drop_start}–${g.drop_end}. Ad cap ${g.ad_cap_egp} EGP, spent ${g.ad_spent_egp}.
 ACCOUNT AVERAGE: ${avg.savesShares.toFixed(1)} saves+shares and ${avg.follows.toFixed(1)} follows per 1,000 views.
 
 MEMORY — what we already posted and how it did (never repeat a topic or hook):
