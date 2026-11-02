@@ -146,3 +146,55 @@ export function methodChecks(o: any, format: string): MethodCheck[] {
   ];
   return checks;
 }
+
+// ------------------------------------------------------------------ PRODUCT VIDEO PLAYBOOK (Fash Studio "Steal Our Prompts", rebuilt 2 Nov 2026)
+
+export type VideoStyle = { n: number; name: string; family: "Movement" | "Camera" | "Reveal" | "Fast-cut" | "Still life"; seconds: string; best: string; prompt: string };
+
+/** 19 shot styles. [PRODUCT] [MODEL] [STYLING] [COLOUR] [PROP] are placeholders. */
+export const VIDEO_STYLES: VideoStyle[] = [
+  { n: 1, name: "Golden Hour Wall", family: "Reveal", seconds: "6", best: "Jackets, knitwear, autumn drops, moody brand posts", prompt: "[MODEL] wearing [PRODUCT] with [STYLING] walks slowly past a warm golden-hour light beam on a plain wall, then leans back against a sunlit brick wall and glances at the camera. Long shadows, warm orange light, cinematic film look, 9:16." },
+  { n: 2, name: "Outfit Check", family: "Fast-cut", seconds: "7.5", best: "Reels/TikTok fit checks, full looks", prompt: "Fast-cut outfit check of [MODEL] wearing [PRODUCT] with [STYLING] in front of an old carved wooden door. Shot 1 full body; shot 2 close-up of [PRODUCT] fabric and details; shot 3 close-up of accessories; shot 4 face, confident look; shot 5 model turns to show the back. Natural daylight, handheld feel, 9:16." },
+  { n: 3, name: "Runway Walk", family: "Movement", seconds: "8", best: "E-commerce: fit and drape in motion", prompt: "[MODEL] wearing [PRODUCT] walks confidently straight toward the camera like on a runway, plain white studio wall and grey floor, even soft lighting, camera static at waist height, full body in frame, 9:16." },
+  { n: 4, name: "Minimal Motion", family: "Still life", seconds: "10", best: "Product pages: a living photo", prompt: "[MODEL] wearing [PRODUCT] stands still in front of a softly draped [COLOUR] fabric backdrop, hands in pockets. Only subtle motion: breathing, a slight weight shift, a small head tilt, fabric moving gently. Static camera, studio light, 9:16." },
+  { n: 5, name: "Walk Right", family: "Movement", seconds: "5", best: "Menswear, basics, side silhouette", prompt: "[MODEL] wearing [PRODUCT] walks from left to right through a modern concrete building with large windows. Camera tracks alongside at the same speed, full body side view, natural daylight, 9:16." },
+  { n: 6, name: "The Approach", family: "Movement", seconds: "6", best: "Outerwear and tops where the front detail matters", prompt: "[MODEL] wearing [PRODUCT] walks slowly toward the camera on a clean white background, starting full body and ending in a chest-up close-up that shows the fabric and details. Serious expression, soft studio light, 9:16." },
+  { n: 7, name: "Smile & Pose", family: "Reveal", seconds: "6", best: "Lifestyle posts, warm brands", prompt: "[MODEL] wearing [PRODUCT] with [STYLING] stands on a city rooftop at sunset with the skyline behind, starts in profile, turns to the camera, smiles and puts a hand on the hip to show the outfit. Warm light, static camera, 9:16." },
+  { n: 8, name: "Arc Right", family: "Camera", seconds: "5", best: "3D view of a jacket/hoodie, street style", prompt: "Slow camera orbit to the right around [MODEL] wearing [PRODUCT], standing still on a tree-lined city street. The model looks off-camera. Overcast daylight, shallow depth of field, 9:16." },
+  { n: 9, name: "Effortless Flip", family: "Reveal", seconds: "5", best: "Tops; attention in the first second", prompt: "Close-up of [MODEL] flipping their hair, then the camera pulls back smoothly to a full-body shot showing [PRODUCT] with [STYLING]. Plain grey studio background, soft light, 9:16." },
+  { n: 10, name: "Shoulder Sequence", family: "Fast-cut", seconds: "9", best: "Products with one key detail", prompt: "Sequence of [MODEL] wearing [PRODUCT] on a warm brown studio backdrop: full-body pose, a slow push to the shoulder and neckline, a tight close-up of the fabric texture, then a new full-body pose showing the silhouette. Editorial lighting, 9:16." },
+  { n: 11, name: "Outfit Reveal", family: "Reveal", seconds: "9", best: "Launches, the reveal", prompt: "Opens in darkness, then light sweeps in to reveal [MODEL] wearing [PRODUCT] against a deep backdrop. Alternate between close-up and full-body poses, with a light-trail transition. High-contrast lighting, 9:16." },
+  { n: 12, name: "Face Rush", family: "Camera", seconds: "6", best: "Bold campaign hero clips, ads", prompt: "Wide shot of [MODEL] wearing [PRODUCT] standing in an open landscape under a bright sky, then the camera rushes quickly in to a close-up of the face, then cuts to a view of the back as wind moves the fabric. Bright sun, vivid colours, 9:16." },
+  { n: 13, name: "Doberman Gaze", family: "Still life", seconds: "5", best: "Bold artistic brand image, colour blocking", prompt: "[MODEL] wearing [PRODUCT] stands completely still in front of a large flat [COLOUR] wall under a clear sky, staring straight into the camera. Only the fabric and hair move slightly in the wind. Strong colour blocking, graphic composition, 9:16." },
+  { n: 14, name: "Walk Left", family: "Movement", seconds: "5", best: "Street style, on-the-go looks", prompt: "[MODEL] wearing [PRODUCT] with [STYLING] walks from right to left across a busy city crosswalk between classic stone buildings. Camera tracks with them, full body, natural daylight, 9:16." },
+  { n: 15, name: "Head-to-Toe Shot", family: "Camera", seconds: "5", best: "Full-look reveals, trousers, shoes", prompt: "Camera starts low on the shoes and [PRODUCT], then tilts slowly up to reveal [MODEL]'s full outfit and face. Elegant indoor arcade with a mosaic floor and warm lights, 9:16." },
+  { n: 16, name: "Step Back", family: "Movement", seconds: "6.5", best: "Menswear, relaxed attitude", prompt: "[MODEL] wearing [PRODUCT] with [STYLING] stands close to the camera, then takes a few relaxed steps backward, going from medium shot to full body. Bright midday sun, clear sky, 9:16." },
+  { n: 17, name: "Arc Left", family: "Camera", seconds: "7", best: "Accessories, conceptual posts", prompt: "Slow camera orbit to the left around [MODEL] wearing [PRODUCT], standing still in front of a surreal landscape under a soft teal sky. Conceptual styling, muted colours, 9:16." },
+  { n: 18, name: "Studio Pose", family: "Still life", seconds: "8", best: "Product page, catalogue", prompt: "[MODEL] wearing [PRODUCT] with [STYLING] on a seamless white studio background, changing between three relaxed poses: hands in pockets, a slight turn, a look at the camera. Static camera, even soft light, full body, 9:16." },
+  { n: 19, name: "Turn Around", family: "Reveal", seconds: "5", best: "Anything with a back design", prompt: "[MODEL] wearing [PRODUCT] stands next to a [PROP] in a large sunlit industrial warehouse, then turns slowly all the way around to show the back of the outfit. Natural light from high windows, cinematic, 9:16." },
+];
+
+export const VIDEO_PLACEMENT: [string, string, string][] = [
+  ["Product page (website)", "Studio Pose, Runway Walk, Minimal Motion, Turn Around", "Fit, front and back, no distractions"],
+  ["Reels / TikTok", "Outfit Check, Effortless Flip, Face Rush", "Movement in the first second stops the scroll"],
+  ["Paid ads", "Face Rush, The Approach, Outfit Reveal", "One strong hook, product big in frame"],
+  ["Brand mood / feed", "Golden Hour Wall, Doberman Gaze, Arc Left", "A recognisable look"],
+  ["One detail", "Shoulder Sequence, Head-to-Toe Shot, The Approach", "Camera goes to the detail that sells"],
+  ["Menswear / basics", "Walk Right, Step Back, Runway Walk", "Simple movement, natural attitude"],
+  ["Accessories", "Arc Left, Arc Right, Doberman Gaze", "Camera moves around a still pose"],
+];
+
+export const VIDEO_WEEK = [
+  "Day 1: Outfit Reveal or Face Rush — launch hook for Reels/TikTok",
+  "Day 2: Studio Pose + Turn Around — product page and stories",
+  "Day 3: Outfit Check — full styled look",
+  "Day 4: Shoulder Sequence or Head-to-Toe — the key detail",
+  "Day 5: Golden Hour Wall — mood post",
+  "Day 6: Walk Left / Walk Right — street style",
+  "Day 7: best performer of days 1–6 re-cut as the paid ad",
+];
+
+export const VIDEO_RULE = `PRODUCT VIDEO PLAYBOOK (19 shot styles in 5 families — Movement: Runway Walk, Walk Right, Walk Left, The Approach, Step Back · Camera: Arc Right, Arc Left, Head-to-Toe, Face Rush · Reveal: Smile & Pose, Effortless Flip, Turn Around, Outfit Reveal, Golden Hour Wall · Fast-cut: Outfit Check, Shoulder Sequence · Still life: Minimal Motion, Studio Pose, Doberman Gaze). Format: 9:16, 5–10 s, works silent and loops, one model, one outfit, ONE action + ONE camera move per clip.
+- Pick by placement: website → Studio Pose / Runway Walk / Minimal Motion / Turn Around; Reels/TikTok → Outfit Check / Effortless Flip / Face Rush; ads → Face Rush / The Approach / Outfit Reveal; mood → Golden Hour Wall / Doberman Gaze; one detail → Shoulder Sequence / Head-to-Toe / The Approach.
+- TEMPORARY: our designs live on the BACK and FRONT of the piece → Turn Around and The Approach are the reveal shots (23 Nov); Outfit Reveal (dark → light) is the reveal-day hero. Before 23 Nov only detail/close-up styles with the print hidden.
+- DOCTRINE: products are REAL footage. Use these styles as camera directions for real filming (name the style in "video_style"). AI-generated product video (from a product photo) only if the founder explicitly allows it for that piece — then: clean well-lit product photo, lock the still first, then animate; check print, logo and fabric frame by frame; AI label on; never in captions.`;

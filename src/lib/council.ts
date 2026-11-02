@@ -7,7 +7,7 @@ import { log, saveOutput } from "./data";
 import { checkRules } from "./rules";
 import { list, mutate, newId, now } from "./store";
 import type { Brand, ContentItem, Flag, Product } from "./types";
-import { METHODS_RULE } from "./methods";
+import { METHODS_RULE, VIDEO_RULE } from "./methods";
 
 // ------------------------------------------------------------------ the judges
 
@@ -133,6 +133,7 @@ PART 3 — PROCESS (run it all yourself, don't ask permission to improve)
 6 FINAL APPROVAL: rescore the improved version, list remaining weaknesses, production requirements, publishing recommendation.
 
 ${METHODS_RULE}
+${VIDEO_RULE}
 Each judge applies the methods in their area: Strategist → Godin (smallest viable audience, who it's NOT for) + HubSpot pillars; Creative Director → Hormozi hook/retain/reward (one retention method, payoff = hook) + Think Media cover/2–5 s hook + vidIQ outlier formats; Psychologist → Godin 'people like us', status, remarkable; Growth Engineer → Neil Patel/Ahrefs social search (keywords in caption line 1, alt text, subtitles) + native TikTok/Shorts + one new feature; Sales → GaryVee jab/right-hook balance + Hormozi proof-promise-plan. The improved version must fill keywords, alt_text, retention_method, intent, series, cover_text, repurpose and distribution.
 
 SCORING: score each category 0–10 (HQ applies the weights): hook 15 · retention 15 · emotion 15 · brand 10 · audience 10 · story 10 · share 10 · sales 10 · cta 5. 90+ exceptional · 80–89 strong · 70–79 needs improvement · 60–69 major reconstruction · <60 reject and rebuild.

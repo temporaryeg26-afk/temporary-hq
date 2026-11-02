@@ -6,7 +6,7 @@
 import { log } from "./data";
 import { checkRules } from "./rules";
 import { COUNCIL_RULE } from "./council";
-import { METHODS_RULE, METHODS_SCHEMA } from "./methods";
+import { METHODS_RULE, METHODS_SCHEMA, VIDEO_RULE } from "./methods";
 import { insert, newId, now } from "./store";
 import type { Brand, ContentItem, Product } from "./types";
 
@@ -51,6 +51,7 @@ const RULES = `NON-NEGOTIABLE RULES
 - ALL DEPARTMENTS ON EVERY PIECE (standing rule): each item carries "alt_hook" (Growth: a second hook for a Trial Reel), "ads" (Media Buying: layer COLD/WARM/HOT or none, objective, primary_text_ar, headline, use, test + stop rule; 9:16, hook burned in on frame 1, on-screen text so it works muted, no prices) and "departments" (one line each from content, growth, media, community, brand).
 ${COUNCIL_RULE}
 ${METHODS_RULE}
+${VIDEO_RULE}
 - Posting times (Cairo): carousel 13:00–14:00, static 18:00–19:00, Reel 20:00–21:00, stories 21:00–23:00.`;
 
 const SCHEMA = `ANSWER = ONE JSON object, nothing else:
@@ -83,7 +84,7 @@ const SCHEMA = `ANSWER = ONE JSON object, nothing else:
       "ads": { "layer": "COLD|WARM|HOT|none", "objective": "…", "primary_text_ar": "…", "headline": "…", "use": "…", "test": "budget, duration, stop rule" },
       "departments": { "content": "…", "growth": "…", "media": "…", "community": "…", "brand": "…" },
       "council": { "score": 0-100, "weakest": "…", "fixed": "…" },
-      ${METHODS_SCHEMA}
+      ${METHODS_SCHEMA}, "video_style": "one of the 19 shot styles for reels/videos (e.g. Turn Around)"
     }
   ]
 }`;
