@@ -62,11 +62,11 @@ export const TEAM: Employee[] = [
   {
     id: "film",
     name: "Film director",
-    job: "Founder films: 6 × 10-second scenes, voiceover and Flow prompts.",
+    job: "Founder films: 4 × 15-second scenes (Omni Flash), voiceover and Flow prompts.",
     runsOn: "Claude writes · Google Flow films",
     skills: [
-      "Writes 60-second films as 6 chained 10-second scenes (end frame of one = start frame of the next).",
-      "Max ~25 spoken words per scene; one idea per scene; strong first scene.",
+      "Writes 60-second films as 4 chained 15-second scenes (end frame of one = start frame of the next).",
+      "Max ~37 spoken words per scene; one idea per scene; strong first scene.",
       "Masked founder character (made with AI tools), consistent look. No AI note in captions; never claim he is real or filmed live.",
     ],
   },

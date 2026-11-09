@@ -28,9 +28,9 @@ function slotsFor(item: ContentItem): Slot[] {
   if (item.format === "founder_video")
     return (o.scenes ?? []).map((sc: any) => ({
       key: `scene-${sc.n}`,
-      label: `Scene ${sc.n} (10s)`,
+      label: `Scene ${sc.n} (15s)`,
       kind: "video",
-      prompt: [sc.video_prompt ?? sc.visual ?? "", sc.start_frame ? `Starts on: ${sc.start_frame}.` : "", sc.end_frame ? `Ends on: ${sc.end_frame}.` : "", "Exactly 10 seconds."].filter(Boolean).join(" "),
+      prompt: [sc.video_prompt ?? sc.visual ?? "", sc.start_frame ? `Starts on: ${sc.start_frame}.` : "", sc.end_frame ? `Ends on: ${sc.end_frame}.` : "", "Exactly 15 seconds."].filter(Boolean).join(" "),
       text: sc.on_screen_text ?? "",
       aspect: "9:16" as Aspect,
     }));

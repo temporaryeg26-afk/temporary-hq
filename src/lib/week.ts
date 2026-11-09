@@ -48,7 +48,7 @@ const RULES = `NON-NEGOTIABLE RULES
 - POSITIONING: TEMPORARY sells designs, not T-shirts; a small circle, not a mass market; the Founder builds everything himself (website in 7 days, no agency) so the price stays fair from day one. Teach only things that make TEMPORARY look right; never teach a test TEMPORARY might fail. Hooks start from the viewer's world, TEMPORARY appears late and lightly. Never attack local brands; say 'some brands' / 'the market'.
 - FOUNDER character: a masked character made with AI tools. Never claim he is real or filmed live. Never mention AI in captions. Add "ai_label": true on any piece showing him.
 - THE FOUNDER (voice of the brand): masked, calm, confident, generous with knowledge — an insider who tells people what sellers won't. He teaches, he doesn't sell. Consistent look in every video: a man in a black oversized hoodie with a small white "TEMPORARY™" chest print, wearing a sculpted black-and-chrome geometric mask engraved with angular TEMPORARY lettering, silver rings, dark studio light. He speaks Egyptian Arabic (Masri).
-- Founder 60s video = 6 clips × 10s, ONE continuous story: clip 1 = hook (a question or bold statement in his voice), clips 2–5 = one piece of advice each with a visible demonstration, clip 6 = payoff + "تابعني" / "ابعتها لصاحبك". Each clip has its own Flow prompt (same character description every time) + his Masri voiceover line + on-screen text.
+- Founder 60s video = 4 clips × 15s (Omni Flash), ONE continuous story: clip 1 = hook (a question or bold statement in his voice), clips 2–3 = the point with a visible demonstration, clip 4 = payoff + "تابعني" / "ابعتها لصاحبك". Each clip has its own Flow prompt (same character description every time) + his Masri voiceover line + on-screen text.
 - PRODUCT TRUTH: Founder Drop 1 designs are BOLD, MULTI-COLOUR statement graphics on black (graffiti typography, neon, characters). Never give style advice that works against bold colour, graphics, statement type or loud prints; make the bold graphic the hero (black/neutral base, one statement piece).
 - ALL DEPARTMENTS ON EVERY PIECE (standing rule): each item carries "alt_hook" (Growth: a second hook for a Trial Reel), "ads" (Media Buying: layer COLD/WARM/HOT or none, objective, primary_text_ar, headline, use, test + stop rule; 9:16, hook burned in on frame 1, on-screen text so it works muted, no prices) and "departments" (one line each from content, growth, media, community, brand).
 ${COUNCIL_RULE}
@@ -74,8 +74,8 @@ const SCHEMA = `ANSWER = ONE JSON object, nothing else:
       "slides": [{ "copy": "Arabic", "copy_en": "English", "seconds": 5, "visual": "what the motion scene shows (acts out the point; different style per carousel)" }],
       // story (3–5 frames):
       "frames": [{ "text": "Arabic", "text_en": "English", "sticker": "Poll: … / … | Question: … | Link | none" }],
-      // founder_video (exactly 6 clips × 10s = 60s):
-      "clips": [{ "seconds": 10, "voiceover_ar": "what the Founder says (Masri)", "voiceover_en": "English subtitle", "on_screen_text": "short Arabic text", "on_screen_en": "…", "flow_prompt": "full Veo prompt for this 10s clip incl. the Founder's exact look, action, camera, light" }],
+      // founder_video (exactly 4 clips × 15s = 60s, Omni Flash):
+      "clips": [{ "seconds": 15, "voiceover_ar": "what the Founder says (Masri)", "voiceover_en": "English subtitle", "on_screen_text": "short Arabic text", "on_screen_en": "…", "flow_prompt": "full Omni Flash / Veo prompt for this 15s clip incl. the Founder's exact look, action, camera, light" }],
       // reel (6–12s):
       "scenes": [{ "seconds": 2, "on_screen_text": "Arabic", "on_screen_en": "English", "visual": "what we see" }], "video_prompt": "Flow/Veo prompt",
       "caption_ar": "Masri caption, line 1 = hook", "caption_en": "English caption",
@@ -92,7 +92,7 @@ const SCHEMA = `ANSWER = ONE JSON object, nothing else:
 }`;
 
 export function weekCommand(cfg: RunConfig, brand: Brand, products: Product[], posted: Posted[] = [], metrics: Metric[] = []) {
-  const fmts = [cfg.package.static && "1 static post", cfg.package.carousel && "1 motion carousel", cfg.package.stories && "1 story set", cfg.package.reel && "1 Reel", cfg.package.founder60 && "1 Founder 60-second video (6 × 10s clips)"].filter(Boolean).join(" + ");
+  const fmts = [cfg.package.static && "1 static post", cfg.package.carousel && "1 motion carousel", cfg.package.stories && "1 story set", cfg.package.reel && "1 Reel", cfg.package.founder60 && "1 Founder 60-second video (4 × 15s clips)"].filter(Boolean).join(" + ");
   const prods = cfg.products.length ? products.filter((p) => cfg.products.includes(p.code)).map((p) => `${p.code}: ${p.name}${p.specs ? ` — confirmed specs: ${p.specs}` : ""}`).join("\n") : "No product focus (trust / brand phase).";
   const d = brand.doctrine;
   const head =

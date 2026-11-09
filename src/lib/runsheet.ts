@@ -66,14 +66,14 @@ export const ROUTINES: Routine[] = [
   },
   {
     key: "film",
-    title: "Make the founder film (6 × 10 s)",
+    title: "Make the founder film (4 × 15 s)",
     when: "A founder film piece is written.",
     steps: [
-      "Open the piece → Open storyboard. Read every scene: ≤ 25 words, frames chain from scene to scene.",
+      "Open the piece → Open storyboard. Read every scene: ≤ 37 words, frames chain from scene to scene.",
       "Tell the owner the script is ready to read and approve. Only approved scenes go to Flow.",
-      "For each approved scene: Copy for Flow → Google Flow (Veo / Omni Flash, 9:16, 10 s) → generate. While Flow works: STOP and tell the owner to say “continue”.",
+      "For each approved scene: Copy for Flow → Google Flow (Omni Flash / Veo, 9:16, 15 s) → generate. While Flow works: STOP and tell the owner to say “continue”.",
       "Download the clip → open the full piece → upload it into that scene's slot (HQ puts the mask/logo on top).",
-      "When all 6 clips exist: Play full film, check it, tell the owner.",
+      "When all 4 clips exist: Play full film, check it, tell the owner.",
     ],
   },
   {

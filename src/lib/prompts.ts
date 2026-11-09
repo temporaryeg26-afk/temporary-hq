@@ -44,7 +44,7 @@ Export: TEMPORARY_${item.scheduled_for}_01.mp4 … one per slide.`,
 
   if (item.format === "founder_video" && Array.isArray(o.clips) && o.clips.length) {
     const clips = o.clips as any[];
-    const sec = Number(clips[0]?.seconds) || 8;
+    const sec = Number(clips[0]?.seconds) || 15;
     const total = clips.reduce((a, c) => a + (Number(c.seconds) || sec), 0);
     out.push({
       tool: "Flow",
@@ -78,7 +78,7 @@ Export: TEMPORARY_${item.scheduled_for}_founder.mp4`,
       url: "https://labs.google/fx/tools/flow",
       text: `${o.video_prompt ?? ""}
 
-Vertical 9:16, 8–10 seconds, cinematic, premium streetwear. ${LOOK}
+Vertical 9:16, up to 15 seconds (Omni Flash), cinematic, premium streetwear. ${LOOK}
 Scenes:
 ${scenesText(o)}
 No text, no logos in the video (we add text after). ${RULES}`,

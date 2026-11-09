@@ -131,7 +131,7 @@ export function FilmPage({ id }: { id: string }) {
 
   return (
     <div>
-      <Head item={item} kind="Founder film · 6 × 10 s" dirty={dirty} busy={busy} onSave={() => save()} onRestore={(v) => { setO(v); setDirty(true); }} />
+      <Head item={item} kind="Founder film · 4 × 15 s" dirty={dirty} busy={busy} onSave={() => save()} onRestore={(v) => { setO(v); setDirty(true); }} />
       <ErrorNote msg={err} />
 
       <section className="mb-5 grid gap-4 rounded-panel border border-rule bg-soot p-4 md:grid-cols-[1fr_auto]">
@@ -151,7 +151,7 @@ export function FilmPage({ id }: { id: string }) {
         </div>
         <div className="flex flex-wrap items-start gap-2">
           <Button onClick={() => setScript(!script)}>{script ? "Back to storyboard" : "Read full script"}</Button>
-          <Button onClick={() => setPlay(true)} disabled={!allClips} title={allClips ? "" : "All 6 clips are needed"}>
+          <Button onClick={() => setPlay(true)} disabled={!allClips} title={allClips ? "" : "All clips are needed"}>
             Play full film
           </Button>
         </div>
@@ -167,7 +167,7 @@ export function FilmPage({ id }: { id: string }) {
           {scenes.map((s) => (
             <div key={s.n}>
               <p className="text-xs text-concrete">
-                Scene {s.n} · {s.purpose} · {(s.n - 1) * 10}–{s.n * 10}s
+                Scene {s.n} · {s.purpose} · {(s.n - 1) * 15}–{s.n * 15}s
               </p>
               <p className="mt-1 text-lg" dir="auto">
                 {s.voiceover}
@@ -189,14 +189,14 @@ export function FilmPage({ id }: { id: string }) {
               <article key={n} className={`w-[300px] shrink-0 snap-start rounded-panel border bg-soot p-3 text-sm ${s.approved ? "border-moss/60" : "border-rule"}`}>
                 <div className="flex items-center justify-between">
                   <p className="font-semibold">
-                    Scene {n} <span className="font-normal text-concrete">· {s.purpose} · 10 s</span>
+                    Scene {n} <span className="font-normal text-concrete">· {s.purpose} · 15 s</span>
                   </p>
                   {s.approved && <span className="text-xs text-moss">approved</span>}
                 </div>
                 <Clip media={clipOf(n)} />
                 <label className="mt-2 block text-xs">Voiceover</label>
                 <textarea dir="auto" rows={3} value={s.voiceover ?? ""} onChange={(e) => setScene(n, { voiceover: e.target.value })} />
-                <p className={`text-xs ${w > 25 ? "text-brick" : "text-concrete"}`}>{w} words {w > 25 ? "— too long for 10 s" : ""}</p>
+                <p className={`text-xs ${w > 37 ? "text-brick" : "text-concrete"}`}>{w} words {w > 37 ? "— too long for 15 s" : ""}</p>
                 <label className="mt-2 block text-xs">On-screen text</label>
                 <input dir="auto" value={s.on_screen_text ?? ""} onChange={(e) => setScene(n, { on_screen_text: e.target.value })} />
                 <label className="mt-2 block text-xs">Shot (what we see)</label>
@@ -210,7 +210,7 @@ export function FilmPage({ id }: { id: string }) {
                   <label className="mt-2 block text-xs">Flow prompt (English)</label>
                   <textarea rows={5} className="text-xs" value={s.video_prompt ?? ""} onChange={(e) => setScene(n, { video_prompt: e.target.value })} />
                   <div className="mt-1 flex gap-3">
-                    <Copy text={[s.video_prompt, s.start_frame ? `Starts on: ${s.start_frame}.` : "", s.end_frame ? `Ends on: ${s.end_frame}.` : "", "Exactly 10 seconds."].filter(Boolean).join(" ")} label="Copy for Flow" />
+                    <Copy text={[s.video_prompt, s.start_frame ? `Starts on: ${s.start_frame}.` : "", s.end_frame ? `Ends on: ${s.end_frame}.` : "", "Exactly 15 seconds."].filter(Boolean).join(" ")} label="Copy for Flow" />
                     <a href={FLOW} target="_blank" rel="noreferrer" className="text-sm text-ultra">
                       Open Flow
                     </a>

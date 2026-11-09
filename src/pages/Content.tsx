@@ -134,7 +134,7 @@ function NewPiece({ onDone }: { onDone: () => void }) {
             <option value="carousel">Carousel</option>
             <option value="static">Static post</option>
             <option value="story">Story set</option>
-            <option value="founder_video">Founder film (6 × 10s)</option>
+            <option value="founder_video">Founder film (4 × 15s)</option>
             <option value="motion_carousel">Motion carousel</option>
           </select>
         </div>
