@@ -2,6 +2,7 @@ import { useState } from "react";
 import { go, useBrand } from "../App";
 import { Button, Copy, ErrorNote, useAsync } from "./ui";
 import { loadPosted } from "../lib/posted";
+import { loadMetrics } from "../lib/warroom";
 import { DEFAULT_RUN, importWeek, parseWeek, RunConfig, weekCommand } from "../lib/week";
 
 const CHATGPT = "https://chatgpt.com/";
@@ -32,7 +33,8 @@ export default function RunAgency() {
     }
   };
   const posted = useAsync(() => loadPosted(brand.id), [brand.id]);
-  const cmd = weekCommand(cfg, brand, products, posted.data ?? []);
+  const metrics = useAsync(() => loadMetrics(brand.id), [brand.id]);
+  const cmd = weekCommand(cfg, brand, products, posted.data ?? [], metrics.data ?? []);
   const perDay = Object.values(cfg.package).filter(Boolean).length;
 
   const doImport = async () => {

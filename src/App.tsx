@@ -32,6 +32,8 @@ import KnowledgePage from "./pages/Knowledge";
 import Board from "./pages/Board";
 import Council from "./pages/Council";
 import Methods from "./pages/Methods";
+import WarRoom from "./pages/WarRoom";
+import CirclePage from "./pages/Circle";
 import AgentBar from "./components/AgentBar";
 import type { AgentKey } from "./lib/agencyos";
 
@@ -58,7 +60,7 @@ type Room = { key: string; label: string; what: string; agent: AgentKey; pages: 
 
 /** The agency: 6 tabs, one employee each. Every old route still works — it just lives inside a tab now. */
 export const ROOMS: Room[] = [
-  { key: "director", label: "Director", agent: "director", what: "", pages: [["/", "Briefing"], ["/council", "The Council (5 judges)"], ["/knowledge", "Team knowledge"], ["/agency", "Run agency (write a week)"]] },
+  { key: "director", label: "War Room", agent: "director", what: "", pages: [["/", "War Room"], ["/circle", "The Circle"], ["/director", "Director briefing"], ["/council", "Council (advisory)"], ["/knowledge", "Team knowledge"], ["/agency", "Run agency (write a week)"]] },
   {
     key: "content", label: "Content", agent: "content",
     what: "Everything that gets posted: calendar, the Instagram grid, approvals, this week's list and the prompts to make each piece.",
@@ -166,7 +168,7 @@ function Shell({ children }: { children: ReactNode }) {
 
       <main className="mx-auto max-w-6xl px-4 py-8 md:px-8">
         {room.what && <p className="mb-5 text-sm text-concrete">{room.what}</p>}
-        {route !== "/" && <AgentBar key={room.agent} agent={room.agent} />}
+        {route !== "/" && route !== "/director" && <AgentBar key={room.agent} agent={room.agent} />}
         {children}
         <footer className="mt-16 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-rule pt-4 text-xs text-concrete">
           <span>@{email}</span>
@@ -348,9 +350,11 @@ export default function App() {
       case "/pains": return <Board board="pains" />;
       case "/trendlab": return <Board board="trendlab" />;
       case "/methods": return <Methods />;
+      case "/circle": return <CirclePage />;
+      case "/director": return <Director />;
       case "/council": return <Council />;
       case "/council/:id": return <Council id={id} />;
-      default: return <Director />;
+      default: return <WarRoom />;
     }
   })();
 

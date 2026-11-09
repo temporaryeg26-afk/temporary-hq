@@ -11,6 +11,7 @@ import { loadAds, loadContent, log } from "./data";
 import type { AdRecord, Brand, ContentItem, Product } from "./types";
 import { brainOf, KNOWLEDGE_SEED, MISSION, playsFor, TEAM_RULES } from "./experts";
 import { loadPosted, Posted, postedBlock } from "./posted";
+import { loadMetrics, Metric, numbersBlock, warOf, warRules } from "./warroom";
 
 // ------------------------------------------------------------------ goal & calendar
 
@@ -129,11 +130,12 @@ export type Snapshot = {
   pains: Record<string, string>[];
   trendlab: Record<string, string>[];
   posted: Posted[];
+  metrics: Metric[];
   today: string;
 };
 
 export async function loadSnapshot(brand: Brand, products: Product[]): Promise<Snapshot> {
-  const [content, ads, memory, weekly, advice, chat, pitches, knowledge, intel, pains, trendlab, posted] = await Promise.all([
+  const [content, ads, memory, weekly, advice, chat, pitches, knowledge, intel, pains, trendlab, posted, metrics] = await Promise.all([
     loadContent(brand.id).catch(() => [] as ContentItem[]),
     loadAds(brand.id).catch(() => [] as AdRecord[]),
     list<MemoryEntry>(brand.id, "memory").catch(() => []),
@@ -146,6 +148,7 @@ export async function loadSnapshot(brand: Brand, products: Product[]): Promise<S
     list<Record<string, string>>(brand.id, "pains").catch(() => []),
     list<Record<string, string>>(brand.id, "trendlab").catch(() => []),
     loadPosted(brand.id),
+    loadMetrics(brand.id),
   ]);
   return {
     brand, products, goal: goalOf(brand),
@@ -156,7 +159,7 @@ export async function loadSnapshot(brand: Brand, products: Product[]): Promise<S
     chat: chat.sort((a, b) => a.created_at.localeCompare(b.created_at)),
     pitches: pitches.sort((a, b) => b.created_at.localeCompare(a.created_at)),
     knowledge: knowledge.sort((a, b) => b.date.localeCompare(a.date) || b.created_at.localeCompare(a.created_at)),
-    intel, pains, trendlab, posted,
+    intel, pains, trendlab, posted, metrics,
     today: new Date().toISOString().slice(0, 10),
   };
 }
@@ -221,7 +224,7 @@ type Agent = { key: AgentKey; name: string; title: string; room: string; experti
 
 const ALGO_2026 = `How Instagram ranks content now (2026): sends per reach (shares to DMs) weigh most, then watch time / completion, then saves; likes barely matter. A high skip rate in the first 1–2 seconds kills reach. Original content only (reposted / watermarked content is demoted, now also for photos and carousels). Max 5 hashtags; keywords in the caption matter for search. Trial Reels test content on non-followers first. Reels bring ~95% of this account's views. Profiles built around an AI-generated person must carry the "AI-generated profile" label or reach is limited.`;
 const PSYCH = `Buyer psychology we use (ethically): curiosity gaps that the content actually resolves; identity ("people like us wear this"); honest scarcity (a real number, never restocked); reciprocity (teach for free first); commitment ladder (follow → comment FOUNDER → DM → early access → order → Founder status); social proof only when real (never bought likes or fake reviews); loss aversion only when true ("the edition closes on the last day of the drop"). Egyptian Gen Z / millennials: Masri, humour, local references, mistrust of hype, love of local brands done right.`;
-const BRAND_RULES = `TEMPORARY™ rules: premium limited Egyptian streetwear, dark/chrome identity, EVERYTHING IS TEMPORARY. Founder Drop 1 = 2 designs (KEEP IT REAL: graffiti typography in blue/red with a faceless hooded figure; TOO SMART FOR THIS WORLD: neon green/magenta drip type with a Rottweiler in headphones blowing pink bubblegum) — bold, multi-colour statement graphics on black; never publish advice against bold colour, graphics or loud prints — on tee / oversized / hoodie / crewneck, 200 pieces per design in total, never restocked, made to order (delivery days pending vendor confirmation — never promise a number). Founder Drop 1 goal: 400 pieces (2 designs × 200). CURRENT CAMPAIGN (overrides any older early-access step): NO early access; designs hidden until the reveal on 23 Nov; drop open to everyone 25–30 Nov (salary week); Black Friday 27 Nov = same price, no discount; last call 30 Nov. Retail prices = exactly the HQ product catalogue (e.g. regular tee 900, standard hoodie 1,300, premium hoodie 1,500, premium crewneck 1,400 EGP) — public from the reveal, never discounted. Hoodie: heavy fabric, clean hood with no drawstring. Every piece goes through the 5-judge Council (Director → The Council). Founder = 1 piece from any Founder Drop; Founder Elite = 1 piece from each of the 3; Member = buyer of a regular drop. Confirmed Founder perks: early access to the next drops + a private circle — nothing else may be promised. No discounts ever. Returns: made to order, so exchange or refund only if a piece is defective or the wrong item was sent (no change-of-mind returns). Hashtag #temporary_eg. Never name competitors, never invent facts. The masked Founder is an AI character: AI label on, never claim he is filmed live.`;
+const BRAND_RULES = `TEMPORARY™ rules: premium limited Egyptian streetwear, dark/chrome identity, EVERYTHING IS TEMPORARY. Founder Drop 1 = 2 designs (KEEP IT REAL: graffiti typography in blue/red with a faceless hooded figure; TOO SMART FOR THIS WORLD: neon green/magenta drip type with a Rottweiler in headphones blowing pink bubblegum) — bold, multi-colour statement graphics on black; never publish advice against bold colour, graphics or loud prints — on tee / oversized / hoodie / crewneck, 200 pieces per design in total, never restocked, made to order (delivery days pending vendor confirmation — never promise a number). Founder Drop 1 goal: 400 pieces (2 designs × 200). CURRENT CAMPAIGN (overrides any older early-access step): NO early access; reveal on 23 Nov (how much of the back print shows before then = the WAR ROOM REVEAL rule); drop open to everyone 25–30 Nov (salary week); Black Friday 27 Nov = same price, no discount; last call 30 Nov. Retail prices = exactly the HQ product catalogue (e.g. regular tee 900, standard hoodie 1,300, premium hoodie 1,500, premium crewneck 1,400 EGP) — public from the reveal, never discounted. Hoodie: heavy fabric, clean hood with no drawstring. Every plan is red-teamed and judged by real numbers in the War Room (the old 5-judge Council score is advisory only). Founder = 1 piece from any Founder Drop; Founder Elite = 1 piece from each of the 3; Member = buyer of a regular drop. Confirmed Founder perks: early access to the next drops + a private circle — nothing else may be promised. No discounts ever. Returns: made to order, so exchange or refund only if a piece is defective or the wrong item was sent (no change-of-mind returns). Hashtag #temporary_eg. Never name competitors, never invent facts. The masked Founder is an AI character: AI label on, never claim he is filmed live.`;
 
 export const AGENTS: Record<AgentKey, Agent> = {
   director: {
@@ -362,7 +365,7 @@ export async function addKnowledge(brandId: string, k: Omit<Knowledge, "id" | "c
 
 // ------------------------------------------------------------------ the chat brain (paste into Claude / ChatGPT)
 
-function dataBlock(s: Snapshot) {
+export function dataBlock(s: Snapshot) {
   const g = s.goal, p = progress(s), avg = averages(s.memory);
   const mem = s.memory.slice(0, 25).map((m) => `- ${m.date} ${m.format} · ${m.topic} · hook: ${m.hook || "—"} · views ${m.views ?? "?"} · saves ${m.saves ?? "?"} · shares ${m.shares ?? "?"} · follows ${m.follows ?? "?"}${m.boosted ? " · BOOSTED" : ""} · verdict ${m.verdict || "?"}${m.lesson ? ` · lesson: ${m.lesson}` : ""}`).join("\n");
   const wk = s.weekly.slice(0, 4).map((w) => `- week of ${w.week_of}: followers ${w.followers}, views ${w.views}, profile visits ${w.profile_visits}, link taps ${w.link_clicks}, saves ${w.saves}, shares ${w.shares}, follows ${w.new_follows}, FOUNDER DMs ${w.founder_dms}, site visits ${w.site_visits}, add-to-bag ${w.add_to_bag}, orders ${w.orders}, pieces ${w.pieces}, ad spend ${w.ad_spend}${w.notes ? ` (${w.notes})` : ""}`).join("\n");
@@ -370,6 +373,10 @@ function dataBlock(s: Snapshot) {
   const pit = s.pitches.slice(0, 15).map((x) => `- [${x.status}] ${AGENTS[x.agent].name}: ${x.title}${x.note ? ` (Director note: ${x.note})` : ""}`).join("\n");
   return `TODAY: ${s.today} · PHASE: ${phaseOf(s)}
 GOAL: Founder Drop 1 = ${g.goal_pieces} pieces; target 85–90% = ${p.low}–${p.high} sold. Sold so far: ${g.sold}. ${hasEarlyAccess(g) ? `Early access ${g.early_access_start}–${g.early_access_end}; ` : `NO early access. Reveal ${revealOf(g)}; `}drop ${g.drop_start}–${g.drop_end}. Ad cap ${g.ad_cap_egp} EGP, spent ${g.ad_spent_egp}.
+${warRules(warOf(s.brand))}
+
+${numbersBlock(s.metrics ?? [])}
+
 ACCOUNT AVERAGE: ${avg.savesShares.toFixed(1)} saves+shares and ${avg.follows.toFixed(1)} follows per 1,000 views.
 
 ${postedBlock(s.posted)}

@@ -27,7 +27,7 @@ export const TEAM_RULES = `HOW THE TEAM WORKS
 - CURRENT CAMPAIGN (overrides any older playbook step that mentions early access): Founder Drop 1 = 400 pieces (2 designs × 200, never remade). NO early access. Until 23 Nov: real sample footage (fabric, details, the clean hood), design hidden, every post collects '23' comments → DM + Close Friends. Reveal 23 Nov → drop opens 25 Nov for everyone (salary week) → Black Friday 27 Nov: same price, no discount, the price itself is the message → last call 30 Nov. Ad budget is zero until the founder adds money.
 - ${METHODS_RULE.replace(/\n/g, "\n  ")}
 - ${VIDEO_RULE.replace(/\n/g, "\n  ")}
-- FIVE-JUDGE COUNCIL (standing rule): every piece is reviewed by the Council (Strategist, Creative Director, Consumer Psychologist, Growth Engineer, Sales Psychologist) before approval; aim for 85+/100.
+- WAR ROOM (standing rule): the Director of Content owns the goal; every plan is red-teamed (GPT) and every post is judged against the account median after 48 h. AI scores (the old Council) are advisory only — real numbers decide.
 - ALL DEPARTMENTS WORK TOGETHER ON EVERY PIECE (standing rule): Content writes it; Growth adds an alternative hook for a Trial Reel + the metric to watch; Media Buying makes it ad-ready (funnel layer, objective, ad copy in Masri, test + stop rule — 9:16, hook burned in on frame 1, works muted, no prices); Community plans the replies/DMs; Brand checks it. Every piece and every pitch must say how it can be used in ads.`;
 
 type Expert = { mastery: string; frameworks: string; plays: Record<Phase, string[]>; kpis: string; pitches: string };

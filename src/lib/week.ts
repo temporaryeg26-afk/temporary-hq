@@ -8,6 +8,7 @@ import { checkRules } from "./rules";
 import { COUNCIL_RULE } from "./council";
 import { METHODS_RULE, METHODS_SCHEMA, VIDEO_RULE } from "./methods";
 import { Posted, postedBlock } from "./posted";
+import { Metric, numbersBlock, warOf, warRules } from "./warroom";
 import { insert, newId, now } from "./store";
 import type { Brand, ContentItem, Product } from "./types";
 
@@ -90,7 +91,7 @@ const SCHEMA = `ANSWER = ONE JSON object, nothing else:
   ]
 }`;
 
-export function weekCommand(cfg: RunConfig, brand: Brand, products: Product[], posted: Posted[] = []) {
+export function weekCommand(cfg: RunConfig, brand: Brand, products: Product[], posted: Posted[] = [], metrics: Metric[] = []) {
   const fmts = [cfg.package.static && "1 static post", cfg.package.carousel && "1 motion carousel", cfg.package.stories && "1 story set", cfg.package.reel && "1 Reel", cfg.package.founder60 && "1 Founder 60-second video (6 × 10s clips)"].filter(Boolean).join(" + ");
   const prods = cfg.products.length ? products.filter((p) => cfg.products.includes(p.code)).map((p) => `${p.code}: ${p.name}${p.specs ? ` — confirmed specs: ${p.specs}` : ""}`).join("\n") : "No product focus (trust / brand phase).";
   const d = brand.doctrine;
@@ -110,6 +111,10 @@ ${d ? `BRAND BOOK: belief: ${d.belief} | promise: ${d.promise} | voice: ${d.voic
 ${cfg.notes ? `OWNER NOTES: ${cfg.notes}` : ""}
 
 ${RULES}
+
+${warRules(warOf(brand))}
+
+${numbersBlock(metrics)}
 
 ${postedBlock(posted)}
 
